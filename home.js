@@ -63,7 +63,7 @@ export function initHome({open}) {
   function hideToast() { clearTimeout(toastTimer); $('toast').hidden = true; }
 
   // ---------- 清單 ----------
-  const meta = r => `${r.format} · ${fmtBytes(r.blob.size)}`;
+  const meta = r => `${r.format} · ${fmtBytes(r.size)}`;
   function picture(r) { // 開過的圖用小圖；舊紀錄或還沒開過的用文件圖示
     if (typeof r.thumb !== 'string' || !r.thumb.startsWith('data:image/')) return icon('i-doc');
     const img = el('img', 'vv-tile__art');
@@ -169,7 +169,7 @@ export function initHome({open}) {
     $('pagePrev').disabled = state.page <= 1;
     $('pageNext').disabled = state.page >= pages;
     $('usage').hidden = state.tab !== 'library' || !records.length || !!needle;
-    $('usageValue').textContent = fmtBytes(records.reduce((sum, r) => sum + r.blob.size, 0));
+    $('usageValue').textContent = fmtBytes(records.reduce((sum, r) => sum + r.size, 0));
     remember();
   }
   async function refresh({keepScroll = true} = {}) {

@@ -24,13 +24,16 @@ try:
             page.locator('.drawing-item', has_text=name).first.wait_for()
         upload('合成圖.dxf')
         info = page.evaluate("""async () => { const lib = await import('/library.js'); const rows = await lib.listDrawings();
-          const b = rows[0].blob; return {count:rows.length, blob:b instanceof Blob, file:b instanceof File, bytes:Array.from(new Uint8Array(await b.arrayBuffer()))}; }""")
-        assert info['count'] == 1 and info['blob'] and not info['file'] and bytes(info['bytes']) == DATA, info
+          const db = await new Promise((resolve, reject) => { const r = indexedDB.open('vidoviewer-library'); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
+          const tx = db.transaction(['drawings','files']); const meta = await new Promise(resolve => {const r=tx.objectStore('drawings').get(rows[0].id); r.onsuccess=()=>resolve(r.result)});
+          const data = await new Promise(resolve => {const r=tx.objectStore('files').get(rows[0].id); r.onsuccess=()=>resolve(r.result)}); db.close();
+          return {count:rows.length, hasBlob:'blob' in meta, size:meta.size, buffer:data instanceof ArrayBuffer, bytes:Array.from(new Uint8Array(data))}; }""")
+        assert info['count'] == 1 and not info['hasBlob'] and info['size'] == len(DATA) and info['buffer'] and bytes(info['bytes']) == DATA, info
         upload('合成圖.dxf')
         page.get_by_text('1 個已在資料庫').wait_for()
         assert page.evaluate("async () => (await (await import('/library.js')).listDrawings()).length") == 1
         restored = page.evaluate("""async () => { const lib = await import('/library.js'); const before = (await lib.listDrawings())[0];
-          await lib.softDelete(before.id); const result = await lib.importDrawing(new File([before.blob], before.name));
+          await lib.softDelete(before.id); const result = await lib.importDrawing(new File([(await lib.getDrawing(before.id)).blob], before.name));
           return result.id === before.id && !result.duplicate && !(await lib.getDrawing(before.id)).deletedAt; }""")
         assert restored
         ctx.close(); ctx = launch(); page = ctx.pages[0]; page.goto(URL, wait_until='networkidle')
@@ -39,10 +42,29 @@ try:
         page.wait_for_function('history.state && history.state.drawingId')
         page = ctx.new_page(); page.goto(URL, wait_until='networkidle'); page.locator('#homeScroll').wait_for(state='visible')
         upload('圖二.dxf', DATA + b'\n')
+        upload('檔案缺失.dxf', DATA + b'\n\n')
+        await_missing = page.evaluate("""async () => { const lib=await import('/library.js'); const row=(await lib.listDrawings()).find(x=>x.name==='檔案缺失.dxf');
+          const db=await new Promise(ok=>{const q=indexedDB.open('vidoviewer-library');q.onsuccess=()=>ok(q.result)});
+          await new Promise((ok,no)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').delete(row.id);tx.oncomplete=ok;tx.onabort=()=>no(tx.error)});db.close();return row.id; }""")
+        assert await_missing
+        page.locator('.drawing-item', has_text='檔案缺失.dxf').click()
+        page.locator('#dialogText').wait_for(state='visible')
+        assert page.locator('#dialogText').inner_text() == '這張圖的資料已失效，請重新匯入。（NotFoundError）'
+        page.click('#dialogConfirm'); page.locator('#toastUndo').wait_for(state='visible'); page.click('#toastUndo')
+        page.locator('.drawing-item', has_text='檔案缺失.dxf').wait_for()
+        page.evaluate("""async () => { const lib=await import('/library.js'); const first=(await lib.listDrawings()).find(x=>x.name==='合成圖.dxf');
+          const blob=(await lib.getDrawing(first.id)).blob; const db=await new Promise(ok=>{const q=indexedDB.open('vidoviewer-library');q.onsuccess=()=>ok(q.result)});
+          await new Promise((ok,no)=>{const tx=db.transaction('drawings','readwrite');tx.objectStore('drawings').add({name:'舊資料.dxf',format:'DXF',blob,lastModified:0});tx.oncomplete=ok;tx.onabort=()=>no(tx.error)});db.close(); }""")
+        page.reload(wait_until='networkidle'); page.locator('.drawing-item', has_text='舊資料.dxf').wait_for()
+        page.evaluate("localStorage.setItem('test-read-failure', 'NotFoundError')")
+        page.locator('.drawing-item', has_text='舊資料.dxf').click()
+        page.locator('#dialogText').wait_for(state='visible')
+        assert page.locator('#dialogText').inner_text() == '這張圖的資料已失效，請重新匯入。（NotFoundError）'
+        page.click('#dialogCancel')
         page.evaluate("localStorage.setItem('test-read-failure', 'NotFoundError')")
         page.locator('.drawing-item', has_text='合成圖.dxf').click()
         page.locator('#dialogText').wait_for(state='visible')
-        assert page.locator('#dialogText').inner_text() == '這張圖的資料已失效，請重新匯入。'
+        assert page.locator('#dialogText').inner_text() == '這張圖的資料已失效，請重新匯入。（NotFoundError）'
         assert page.locator('#dialogConfirm').inner_text() == '刪除這筆'
         page.click('#dialogConfirm')
         page.locator('#toastUndo').wait_for(state='visible')
@@ -54,17 +76,18 @@ try:
         page.locator('.drawing-item', has_text='合成圖.dxf').click()
         page.locator('#dialogText').wait_for(state='visible')
         assert page.locator('#dialogConfirm').inner_text() == '重試'
-        assert page.locator('#dialogText').inner_text() != '這張圖的資料已失效，請重新匯入。'
+        assert page.locator('#dialogText').inner_text() != '這張圖的資料已失效，請重新匯入。（NotFoundError）'
         page.evaluate("localStorage.removeItem('test-read-failure')")
         page.click('#dialogConfirm')
         page.locator('#viewerLayer').wait_for(state='visible', timeout=30000)
-        stale = page.evaluate("""async () => { const lib = await import('/library.js'); const row = (await lib.listDrawings())[0];
-          const input = new File([await row.blob.arrayBuffer()], '重匯合成圖.dxf'); const original = Blob.prototype.slice;
+        stale = page.evaluate("""async () => { const lib = await import('/library.js'); const first = (await lib.listDrawings())[0];
+          const input = new File([(await lib.getDrawing(first.id)).blob, new Uint8Array([55,66,77])], '重匯合成圖.dxf');
+          const row = await lib.importDrawing(input); const original = Blob.prototype.slice;
           Blob.prototype.slice = function(...args) { Blob.prototype.slice = original; return {arrayBuffer: () => Promise.reject(new DOMException('missing', 'NotFoundError'))}; };
           try { const result = await lib.importDrawing(input); return !result.duplicate && result.id !== row.id; }
           finally { Blob.prototype.slice = original; } }""")
         assert stale
         ctx.close()
-        print('合成 DXF：Blob 位元組、重啟、去重、失效刪除復原、其他錯誤與重試通過')
+        print('合成 DXF：ArrayBuffer 位元組、重啟、去重、失效刪除復原、其他錯誤與重試通過')
 finally:
     server.terminate(); server.wait(timeout=5)

@@ -12,7 +12,7 @@ python3 tools/preview-server.py 127.0.0.1 8769 /private/tmp/vidoviewer-preview  
 python3 tools/preview-server.py <這台 Mac 的區網位址> 8770 /private/tmp/vidoviewer-preview 4  # 私人區網，四小時後自動停止
 ```
 
-兩個預覽共用同一個目錄，改完程式只要重跑 `sync-preview.sh`，不必重啟伺服器。`index.html` 依序載入 `styles/tokens.css`、`styles/components.css`、`design-bridge.css`（App 專用的少量樣式，不覆寫 Dock 與讀數卡定位）。localhost 或 HTTPS 才有 Service Worker；任何快取內容更新都要升級 `sw.js` 的版本（目前 v60）。
+兩個預覽共用同一個目錄，改完程式只要重跑 `sync-preview.sh`，不必重啟伺服器。`index.html` 依序載入 `styles/tokens.css`、`styles/components.css`、`design-bridge.css`（App 專用的少量樣式，不覆寫 Dock 與讀數卡定位）。localhost 或 HTTPS 才有 Service Worker；任何快取內容更新都要升級 `sw.js` 的版本（目前 v61）。
 
 ## 功能
 
@@ -29,6 +29,8 @@ python3 tools/preview-server.py <這台 Mac 的區網位址> 8770 /private/tmp/v
 ## 驗證
 
 測試只用合成圖（`tests/make-fixtures.py` 產生），從實際網址操作：
+
+匯入持久化可執行 `python3 tests/e2e/import-persistence.py` 與 `python3 tests/e2e/library-storage.py`。65 MB 匯入可用 `python3 tests/e2e/import-memory.py` 量測：2026-11-25 在本機 Chrome 以約 50 ms 間隔抽樣整棵程序的 RSS，基準 711.7 MiB、最高樣本 908.3 MiB，相差 196.6 MiB；包含合成檔建立與程序共用頁面，短暫峰值可能漏測，不能代表 iPhone 實際記憶體用量或成功率。IndexedDB 升級保留舊 Blob；新匯入的圖面位元組放在獨立儲存區，正式 iPhone PWA 的重新匯入及重開仍需真機驗證。
 
 ```sh
 python3 tests/e2e/undo-saved.py URL # 已存標記撤銷、交易回滾與隔離

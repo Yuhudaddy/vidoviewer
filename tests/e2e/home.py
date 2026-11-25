@@ -20,11 +20,11 @@ def shot(page, name):
     if EVIDENCE:
         page.screenshot(path=str(EVIDENCE / f'{PREFIX}-{name}.png'))
 
-DB = """() => new Promise((res, rej) => { const o = indexedDB.open('vidoviewer-library', 1);
+DB = """() => new Promise((res, rej) => { const o = indexedDB.open('vidoviewer-library');
   o.onsuccess = () => { const q = o.result.transaction('drawings').objectStore('drawings').getAll();
-    q.onsuccess = () => { o.result.close(); res(q.result.map(r => ({id: r.id, name: r.name, favorite: !!r.favorite, opened: !!r.openedAt, deleted: !!r.deletedAt, size: r.blob.size}))) }; q.onerror = () => rej(q.error) };
+    q.onsuccess = () => { o.result.close(); res(q.result.map(r => ({id: r.id, name: r.name, favorite: !!r.favorite, opened: !!r.openedAt, deleted: !!r.deletedAt, size: r.size ?? r.blob.size}))) }; q.onerror = () => rej(q.error) };
   o.onerror = () => rej(o.error) })"""
-LEGACY = """(bytes) => new Promise((res, rej) => { const o = indexedDB.open('vidoviewer-library', 1);
+LEGACY = """(bytes) => new Promise((res, rej) => { const o = indexedDB.open('vidoviewer-library');
   o.onsuccess = () => { const tx = o.result.transaction('drawings', 'readwrite');
     tx.objectStore('drawings').add({name: '舊資料.dxf', format: 'DXF', blob: new Blob([new Uint8Array(bytes)]), lastModified: 0});
     tx.oncomplete = () => { o.result.close(); res(true) }; tx.onerror = () => rej(tx.error) };

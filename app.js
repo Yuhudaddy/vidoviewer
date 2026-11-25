@@ -3,7 +3,7 @@ import {snapAt} from './core/query.js';
 import {pickClosed} from './core/pick.js';
 import {convertArea, convertLength, unitByName} from './core/units.js';
 import {ParseLifecycle, LARGE_LIMIT, FILE_LIMIT} from './parse-lifecycle.js';
-import {getDrawing, importDrawing, markOpened, setThumbnail, addMark, deleteMark, ensureMarkNumbers, setMeasurementState, undoMeasurementAtomic} from './library.js';
+import {getDrawing, getDrawingMetadata, importDrawing, markOpened, setThumbnail, addMark, deleteMark, ensureMarkNumbers, setMeasurementState, undoMeasurementAtomic} from './library.js';
 import {initHome, fmtBytes} from './home.js';
 
 const $ = id => document.getElementById(id);
@@ -124,7 +124,14 @@ async function openRecord(id, push) {
   parser.cancel();
   await historyChain; // 同一分頁快速切圖或重開時，先寫完前一張圖的狀態。
   if (token !== requestId) return;
-  const record = await getDrawing(id).catch(() => null);
+  let record;
+  try { record = await getDrawing(id); }
+  catch (error) {
+    if (token !== requestId) return;
+    if (error?.dataMissing) await missingData(id, push);
+    else if (await dialog('無法開啟圖檔', '讀取失敗，請重試。', '重試', '關閉')) return openRecord(id, push);
+    return;
+  }
   if (token !== requestId) return;
   if (!record || record.deletedAt) {
     await dialog('找不到圖面', '', '了解', '');
@@ -134,7 +141,7 @@ async function openRecord(id, push) {
   if (record.blob.size > LARGE_LIMIT && !await dialog('開啟大型圖檔', `${record.name}　${fmtBytes(record.blob.size)}`, '開啟')) return;
   if (token !== requestId) return;
   await ensureMarkNumbers(id);
-  const updatedRecord = await getDrawing(id);
+  const updatedRecord = await getDrawingMetadata(id);
   if (token !== requestId) return;
   currentRecordId = id;
   const file = new File([record.blob], record.name, {lastModified: record.lastModified});
@@ -143,10 +150,12 @@ async function openRecord(id, push) {
     const picture = renderer.thumbnail(320, 200); // 16:10 小圖，只存在本機 IndexedDB
     if (picture) setThumbnail(id, picture.toDataURL('image/png')).catch(() => {});
     if (push) history.pushState({drawingId: id, fromLibrary: true}, '', `#drawing=${id}`);
-  }, updatedRecord, async () => {
-    if (!push) { history.replaceState(null, '', location.pathname + location.search); showLibrary(); }
-    await home.remove(id);
-  });
+  }, updatedRecord, () => missingData(id, push));
+}
+async function missingData(id, push) {
+  if (!await dialog('無法開啟圖檔', '這張圖的資料已失效，請重新匯入。（NotFoundError）', '刪除這筆', '關閉')) return;
+  if (!push) { history.replaceState(null, '', location.pathname + location.search); showLibrary(); }
+  await home.remove(id);
 }
 async function openFile(file, token, onOpened, record, removeRecord) {
   while (token === requestId) {
@@ -162,7 +171,7 @@ async function openFile(file, token, onOpened, record, removeRecord) {
     if (result.status === 'done') { showDrawing(file.name, result.value, record); onOpened(); return; }
     if (result.status === 'cancelled') return;
     if (result.status === 'data-missing') {
-      if (await dialog('無法開啟圖檔', '這張圖的資料已失效，請重新匯入。', '刪除這筆', '關閉')) await removeRecord();
+      await removeRecord();
       return;
     }
     const messages = {error: result.value || '解析失敗', timeout: '開啟逾時', 'storage-error': '無法記錄開啟狀態', 'too-large': '超過 65 MB'};

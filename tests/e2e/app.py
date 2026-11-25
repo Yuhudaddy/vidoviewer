@@ -237,7 +237,7 @@ def desktop(p):
     page.locator('#homeScroll').wait_for(state='visible')
 
     # 範例圖：只能從使用說明開啟，不列在首頁清單
-    SAMPLE_DB = """() => new Promise((res, rej) => { const o = indexedDB.open('vidoviewer-library', 1); o.onsuccess = () => { const q = o.result.transaction('drawings').objectStore('drawings').getAll();
+    SAMPLE_DB = """() => new Promise((res, rej) => { const o = indexedDB.open('vidoviewer-library'); o.onsuccess = () => { const q = o.result.transaction('drawings').objectStore('drawings').getAll();
       q.onsuccess = () => { o.result.close(); res(q.result.filter(r => r.name === 'mini.dxf').map(r => ({example: !!r.example, deleted: !!r.deletedAt}))) }; q.onerror = () => rej(q.error) }; o.onerror = () => rej(o.error) })"""
     def open_example():
         page.click('#helpOpen'); page.click('#example')
@@ -335,7 +335,7 @@ def desktop(p):
     if SECURE:
         page.evaluate('() => navigator.serviceWorker.ready.then(() => true)')
         keys = page.evaluate('() => caches.keys()')
-        check('SW 快取為新版且只有一份', len(keys) == 1 and keys[0].endswith('-v60'), keys)
+        check('SW 快取為新版且只有一份', len(keys) == 1 and keys[0].endswith('-v61'), keys)
         ctx.set_offline(True)
         offline_state['offline'] = True
         page.reload(); page.locator('.drawing-item').first.wait_for(timeout=15000)

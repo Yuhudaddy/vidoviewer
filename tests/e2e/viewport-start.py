@@ -29,7 +29,7 @@ with sync_playwright() as p:
   page.click('#polygonClear')
   for x,y in [(20,15),(45,15),(45,30)]:click(x,y)
   x,y=pt(20,15);page.mouse.click(x+15,y);assert page.locator('#result').is_visible();page.click('#saveMark');page.wait_for_function("() => document.querySelector('#drawing').dataset.markCount==='1'")
-  vertices=page.evaluate('''() => new Promise((resolve,reject)=>{const q=indexedDB.open('vidoviewer-library',1);q.onerror=()=>reject(q.error);q.onsuccess=()=>{const db=q.result,r=db.transaction('drawings').objectStore('drawings').getAll();r.onsuccess=()=>{const points=r.result[0].marks[0].measurement.points;db.close();resolve(points)};r.onerror=()=>reject(r.error)}})''');assert len(vertices)==3 and vertices[0]!=vertices[-1],vertices
+  vertices=page.evaluate('''() => new Promise((resolve,reject)=>{const q=indexedDB.open('vidoviewer-library');q.onerror=()=>reject(q.error);q.onsuccess=()=>{const db=q.result,r=db.transaction('drawings').objectStore('drawings').getAll();r.onsuccess=()=>{const points=r.result[0].marks[0].measurement.points;db.close();resolve(points)};r.onerror=()=>reject(r.error)}})''');assert len(vertices)==3 and vertices[0]!=vertices[-1],vertices
   page.reload();page.locator('#viewerLayer').wait_for(state='visible');assert page.locator('#drawing').get_attribute('data-mark-count')=='1';page.click('#speedToggle');page.click('#marksOpen');page.locator('#marksList .app-mark-open').first.click();assert page.locator('#result').is_visible()
   assert not errors,errors;page.close()
  # Test source point priority against an adjacent CAD endpoint: first point is deliberately free.
