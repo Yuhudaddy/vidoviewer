@@ -143,9 +143,12 @@ async function openRecord(id, push) {
     const picture = renderer.thumbnail(320, 200); // 16:10 小圖，只存在本機 IndexedDB
     if (picture) setThumbnail(id, picture.toDataURL('image/png')).catch(() => {});
     if (push) history.pushState({drawingId: id, fromLibrary: true}, '', `#drawing=${id}`);
-  }, updatedRecord);
+  }, updatedRecord, async () => {
+    if (!push) { history.replaceState(null, '', location.pathname + location.search); showLibrary(); }
+    await home.remove(id);
+  });
 }
-async function openFile(file, token, onOpened, record) {
+async function openFile(file, token, onOpened, record, removeRecord) {
   while (token === requestId) {
     $('loadingName').textContent = file.name;
     $('loadingSize').textContent = fmtBytes(file.size);
@@ -158,6 +161,10 @@ async function openFile(file, token, onOpened, record) {
     setModal(false);
     if (result.status === 'done') { showDrawing(file.name, result.value, record); onOpened(); return; }
     if (result.status === 'cancelled') return;
+    if (result.status === 'data-missing') {
+      if (await dialog('無法開啟圖檔', '這張圖的資料已失效，請重新匯入。', '刪除這筆', '關閉')) await removeRecord();
+      return;
+    }
     const messages = {error: result.value || '解析失敗', timeout: '開啟逾時', 'storage-error': '無法記錄開啟狀態', 'too-large': '超過 65 MB'};
     if (!await dialog('無法開啟圖檔', messages[result.status] || '解析失敗', '重試', '關閉')) return;
   }

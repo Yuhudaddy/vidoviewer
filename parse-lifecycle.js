@@ -10,7 +10,7 @@ export class ParseLifecycle {
   if(file.size>FILE_LIMIT){this.current=null;return {status:'too-large'}}
   if(file.size>LARGE_LIMIT){try{this.storage.setItem(MARKER_KEY,state.id);state.marker=true}catch{this.current=null;return {status:'storage-error'}}}
   try{state.job=this.client.parse(file,{timeoutMs:this.timeoutMs,onStage});const result=await state.job.promise;if(this.current!==state)return {status:'cancelled'};return {status:'done',value:result.scene,stats:result.stats}}
-  catch(e){return {status:e.code==='cancelled'?'cancelled':e.code==='timeout'?'timeout':e.code==='too-large'?'too-large':'error',value:e.message}}
+  catch(e){return {status:e.code==='cancelled'?'cancelled':e.code==='timeout'?'timeout':e.code==='too-large'?'too-large':e.code==='data-missing'?'data-missing':'error',value:e.message}}
   finally{if(state.marker){try{if(this.storage.getItem(MARKER_KEY)===state.id)this.storage.removeItem(MARKER_KEY)}catch{}}if(this.current===state)this.current=null}
  }
  dispose(){this.cancel();this.client.dispose()}

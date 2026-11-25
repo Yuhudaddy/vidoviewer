@@ -379,7 +379,7 @@ export function initHome({open}) {
   });
 
   return {
-    refresh, toast, closeHelp,
+    refresh, toast, closeHelp, remove,
     showTab(tab) { state.tab = tab; state.page = 1; },
     async start() {
       await refresh();

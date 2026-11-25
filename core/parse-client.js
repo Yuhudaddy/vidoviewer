@@ -43,7 +43,7 @@ export function createParseClient({ workerUrl, WorkerCtor = Worker } = {}) {
       w.addEventListener('message', onMsg); w.addEventListener('error', onErr);
       timer = setTimeout(() => { if (done) return; kill(); finish(settle.reject, fail('timeout', `解析超過 ${timeoutMs / 1000} 秒,已中止`)); }, timeoutMs);
       w.postMessage({ type: 'parse', id, name: file.name, buffer }, [buffer]);
-    }, (e) => finish(settle.reject, fail('parse-failed', String(e?.message ?? e))));
+    }, (e) => finish(settle.reject, fail(e?.name === 'NotFoundError' ? 'data-missing' : 'parse-failed', String(e?.message ?? e))));
     return { promise, cancel: cancelFn };
   }
 

@@ -87,7 +87,10 @@ async function sameBlob(a, b) {
   if (a.size !== b.size) return false;
   const chunk = 1024 * 1024;
   for (let i = 0; i < a.size; i += chunk) {
-    const [x, y] = await Promise.all([a.slice(i, i + chunk).arrayBuffer(), b.slice(i, i + chunk).arrayBuffer()]);
+    // 舊紀錄的來源檔可能已失效；略過該候選，仍允許重新匯入。
+    const x = await a.slice(i, i + chunk).arrayBuffer().catch(error => { if (error?.name === 'NotFoundError') return null; throw error; });
+    if (!x) return false;
+    const y = await b.slice(i, i + chunk).arrayBuffer();
     const u = new Uint8Array(x), v = new Uint8Array(y);
     for (let j = 0; j < u.length; j++) if (u[j] !== v[j]) return false;
   }
@@ -102,6 +105,8 @@ export async function importDrawing(file, extra = {}) { // extra: e.g. {example:
     if (candidate.example && !extra.example) { await update(candidate.id, ({example, ...rest}) => rest); return {id: candidate.id, duplicate: false}; }
     return {id: candidate.id, duplicate: true};
   }
-  const id = await run('readwrite', s => s.add({name: file.name, format: file.name.split('.').pop().toUpperCase(), blob: file, lastModified: file.lastModified, added: Date.now(), ...extra}));
+  // 先讀取實際位元組，避免 IndexedDB 保留 iOS 選檔來源的暫存檔引用。
+  const blob = new Blob([await file.arrayBuffer()], {type: file.type});
+  const id = await run('readwrite', s => s.add({name: file.name, format: file.name.split('.').pop().toUpperCase(), blob, lastModified: file.lastModified, added: Date.now(), ...extra}));
   return {id, duplicate: false};
 }
