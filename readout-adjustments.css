@@ -49,3 +49,10 @@
 @supports (height: 100dvh) { .vv-app { height: 100dvh; bottom: auto; } }
 
 .service-disabled { padding: 3rem; color: #eef4f8; background: #171e25; min-height: 100vh; font: 1.2rem system-ui, sans-serif; }
+
+/* 加入主畫面（獨立視窗）：不用 100dvh，改填滿整個螢幕。iPhone 在這個模式下 100dvh 比螢幕少一個狀態列高度，底部的膠囊會被抬高。 */
+@media (display-mode: standalone) {
+  .vv-app { height: auto; bottom: 0; }
+  /* 狀態列（時間、電池）下方再留 --standalone-top-gap（預設 24px，可在 :root 覆寫），標題列與按鈕不要落在系統的淡出範圍內 */
+  :root, .app-viewer { --vv-top: max(4px, calc(env(safe-area-inset-top, 0px) + var(--standalone-top-gap, 24px))); }
+}

@@ -12,7 +12,7 @@ python3 tools/preview-server.py 127.0.0.1 8769 /private/tmp/vidoviewer-preview  
 python3 tools/preview-server.py <這台 Mac 的區網位址> 8770 /private/tmp/vidoviewer-preview 4  # 私人區網，四小時後自動停止
 ```
 
-兩個預覽共用同一個目錄，改完程式只要重跑 `sync-preview.sh`，不必重啟伺服器。`index.html` 依序載入 `styles/tokens.css`、`styles/components.css`、`design-bridge.css`（App 專用的少量樣式，不覆寫 Dock 與讀數卡定位）。localhost 或 HTTPS 才有 Service Worker；任何快取內容更新都要升級 `sw.js` 的版本（目前 v58）。
+兩個預覽共用同一個目錄，改完程式只要重跑 `sync-preview.sh`，不必重啟伺服器。`index.html` 依序載入 `styles/tokens.css`、`styles/components.css`、`design-bridge.css`（App 專用的少量樣式，不覆寫 Dock 與讀數卡定位）。localhost 或 HTTPS 才有 Service Worker；任何快取內容更新都要升級 `sw.js` 的版本（目前 v60）。
 
 ## 功能
 

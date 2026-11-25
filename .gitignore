@@ -10,3 +10,5 @@ evidence/
 .env*
 .impeccable/
 tests/e2e/*-report.md
+__pycache__/
+*.pyc

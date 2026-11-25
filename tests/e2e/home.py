@@ -96,7 +96,7 @@ def main(p):
     check('只有三個分頁：最近、收藏、資料庫', page.locator('.vv-tab').all_inner_texts() == ['最近', '收藏', '資料庫'], page.locator('.vv-tab').all_inner_texts())
     check('沒有大型匯入卡，匯入是右下角浮動＋', page.locator('.vv-import').count() == 0 and page.locator('#import').get_attribute('aria-label') == '匯入圖面' and page.evaluate("() => { const b = document.getElementById('import').getBoundingClientRect(); return innerWidth - b.right <= 24 && innerHeight - b.bottom <= 40 && b.width === 56 }"))
     logo = page.evaluate("() => { const i = document.querySelector('.vv-brand img'), b = i.getBoundingClientRect(); return [i.getAttribute('src'), i.naturalWidth, b.width, b.height] }")
-    check('Logo：載入 96px 資產、顯示 32px（不載原圖）', logo == ['./icons/icon-96.png', 96, 32, 32], logo)
+    check('Logo：載入 96px 透明標誌、顯示 36px（不載原圖）', logo == ['./icons/logo-96.png', 96, 36, 36], logo)
     icons = page.evaluate("() => Promise.all([32, 96, 180, 192, 512].map(s => createImageBitmap ? fetch(`./icons/icon-${s}.png`).then(r => r.blob()).then(createImageBitmap).then(b => b.width === s) : false))")
     manifest = page.evaluate("() => fetch('./manifest.webmanifest').then(r => r.json()).then(m => m.icons.map(i => i.sizes))")
     check('圖示尺寸 32、96、180、192、512 皆可載入，manifest 指向 192 與 512', all(icons) and manifest == ['192x192', '512x512'], (icons, manifest))

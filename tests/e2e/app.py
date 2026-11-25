@@ -3,6 +3,7 @@ Usage: python3 tests/e2e/app.py URL [EVIDENCE_DIR PREFIX]
 Mouse steps use real mouse input events; touch steps use Chrome's simulated touch input (not a real phone)."""
 import shutil, sys, tempfile
 from pathlib import Path
+from request_failures import watch
 from playwright.sync_api import sync_playwright
 
 URL = sys.argv[1]
@@ -85,12 +86,6 @@ def open_tile(page, text):
     page.locator('.drawing-item', has_text=text).first.click()
     page.locator('#viewerLayer').wait_for(state='visible', timeout=30000)
 
-def watch(page):
-    errors = []
-    page.on('pageerror', lambda e: errors.append(str(e)))
-    page.on('console', lambda m: errors.append(m.text + ' @ ' + str(m.location.get('url'))) if m.type == 'error' else None)
-    page.on('requestfailed', lambda r: errors.append('requestfailed ' + r.url + ' ' + str(r.failure)))
-    return errors
 
 def layout_checks(page, view, tag):
     view.calibrate()
@@ -110,7 +105,7 @@ def desktop(p):
     launch = lambda: p.chromium.launch_persistent_context(profile, executable_path=CHROME, headless=True, args=['--no-proxy-server'], viewport={'width': 390, 'height': 844}, device_scale_factor=2)
     ctx = launch()
     page = ctx.pages[0]
-    errors = watch(page)
+    errors = watch(page, URL)
     page.goto(URL, wait_until='networkidle')
 
     # 首頁
@@ -118,7 +113,7 @@ def desktop(p):
     check('首頁：無行銷句', '在現場看清楚' not in text and '圖面，' not in text)
     check('首頁：分頁與匯入鈕', all(s in text for s in ['最近', '收藏', '資料庫', 'VidoViewer']) and page.locator('#import').get_attribute('aria-label') == '匯入圖面')
     logo = page.evaluate("() => { const i=document.querySelector('.vv-brand img'),b=i.getBoundingClientRect(); return [i.naturalWidth,b.width,b.height] }")
-    check('首頁：Logo 已載入且為 32px', logo[0] > 0 and logo[1] == 32 and logo[2] == 32, logo)
+    check('首頁：Logo 已載入且為 36px', logo[0] > 0 and logo[1] == 36 and logo[2] == 36, logo)
     check('首頁：沒有圖面時只有一行字，沒有讀數', page.locator('#homeEmpty').inner_text() == '還沒有圖面' and page.locator('#result').is_hidden())
     if not SECURE:
         check('HTTP 預覽標示無法離線', '無法離線' in page.locator('#toastText').inner_text())
@@ -330,7 +325,8 @@ def desktop(p):
     ctx.close()
     ctx = launch()
     page = ctx.pages[0]
-    errors = watch(page)
+    offline_state = {'offline': False}
+    errors = watch(page, URL, offline_state)
     page.goto(URL, wait_until='networkidle')
     page.click('#tab-library'); page.wait_for_timeout(150)
     check('關閉瀏覽器重開：清單仍在', page.locator('.drawing-item').count() == total, page.locator('.drawing-item').count())
@@ -339,13 +335,16 @@ def desktop(p):
     if SECURE:
         page.evaluate('() => navigator.serviceWorker.ready.then(() => true)')
         keys = page.evaluate('() => caches.keys()')
-        check('SW 快取為新版且只有一份', len(keys) == 1 and keys[0].endswith('-v56'), keys)
+        check('SW 快取為新版且只有一份', len(keys) == 1 and keys[0].endswith('-v60'), keys)
         ctx.set_offline(True)
+        offline_state['offline'] = True
         page.reload(); page.locator('.drawing-item').first.wait_for(timeout=15000)
         open_tile(page, 'arc-check.dxf')
         check('離線：重新載入後仍可開圖', page.locator('#filename').inner_text() == 'arc-check.dxf')
         ctx.set_offline(False)
-    check('重開流程無頁面錯誤', not errors, errors[:3])
+    # 離線時 sw.js 刻意不攔 manifest 與 status.json（要走網路才有意義），瀏覽器記錄這兩個請求失敗是預期，不算頁面錯誤。
+    unexpected = [e for e in errors if not (('/manifest.webmanifest' in e or '/status.json' in e) and 'ERR_INTERNET_DISCONNECTED' in e)]
+    check('重開流程無頁面錯誤', not unexpected, unexpected[:3])
     ctx.close()
     shutil.rmtree(profile, ignore_errors=True)
 
@@ -354,7 +353,7 @@ def touch(p):
     b = p.chromium.launch(executable_path=CHROME, headless=True, args=['--no-proxy-server'])
     ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
     page = ctx.new_page()
-    errors = watch(page)
+    errors = watch(page, URL)
     page.goto(URL, wait_until='networkidle')
     page.locator('#file').set_input_files([payload('arc-check.dxf', ARC)])
     page.locator('.drawing-item').first.wait_for()
