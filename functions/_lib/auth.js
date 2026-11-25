@@ -35,10 +35,11 @@ export function isConfigured(env) {
   return Boolean(env && env.AUTH_USER && env.AUTH_PASSWORD && env.SESSION_SECRET && String(env.SESSION_SECRET).length >= 32);
 }
 
-// 僅使用設定的單一帳號。
+// 第二組必須完整設定，且帳號不可與第一組相同。
 function accountsOf(env) {
   const accounts = [];
   if (env?.AUTH_USER && env?.AUTH_PASSWORD) accounts.push({ id: 1, user: env.AUTH_USER, password: env.AUTH_PASSWORD });
+  if (env?.AUTH_USER_2 && env?.AUTH_PASSWORD_2 && env.AUTH_USER_2 !== env.AUTH_USER) accounts.push({ id: 2, user: env.AUTH_USER_2, password: env.AUTH_PASSWORD_2 });
   return accounts;
 }
 
@@ -76,7 +77,7 @@ export async function checkToken(env, token, nowSeconds = Math.floor(Date.now() 
   const invalid = { valid: false, renew: false, account: 0 };
   if (typeof token !== "string") return invalid;
   const parts = token.split(".");
-  if (parts.length !== 3 || !/^v1$/.test(parts[0]) || !/^\d{1,12}$/.test(parts[1])) return invalid;
+  if (parts.length !== 3 || !/^v[12]$/.test(parts[0]) || !/^\d{1,12}$/.test(parts[1])) return invalid;
   const account = accountsOf(env).find(candidate => candidate.id === Number(parts[0].slice(1)));
   if (!account) return invalid;
   const expires = Number(parts[1]);

@@ -55,6 +55,15 @@ try:
         assert page.url.split('?')[0] == 'http://localhost:8766/login', (page.url, page.locator('body').inner_text())
         page.goto('http://localhost:8766/')
         assert page.url.split('?')[0] == 'http://localhost:8766/login', (page.url, page.locator('body').inner_text())
+        page.fill('[name=username]', 'second')
+        page.fill('[name=password]', 'second-password')
+        page.click('button[type=submit]')
+        page.locator('#helpOpen').wait_for(state='visible')
+        page.click('#helpOpen')
+        page.get_by_role('button', name='登出').click()
+        assert page.url.split('?')[0] == 'http://localhost:8766/login'
+        page.goto('http://localhost:8766/')
+        assert page.url.split('?')[0] == 'http://localhost:8766/login'
         browser.close()
         print('登入、離線、登出、停用、快取清除與 IndexedDB 保留測試通過')
 finally:

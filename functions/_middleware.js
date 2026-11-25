@@ -18,7 +18,7 @@ export async function onRequest(context) {
       response = await context.next();
       if (session.renew && request.method === 'GET' && isNavigation(request)) {
         response = new Response(response.body, response);
-        response.headers.append('Set-Cookie', sessionCookie(await issueToken(env)));
+        response.headers.append('Set-Cookie', sessionCookie(await issueToken(env, undefined, session.account)));
       }
     }
     else if (isNavigation(request)) response = new Response(null, {status: 302, headers: {Location: '/login?' + new URLSearchParams({next: url.pathname + url.search})}});

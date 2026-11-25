@@ -6,7 +6,7 @@ import {onRequest} from '../functions/_middleware.js';
 import {onRequestPost as login} from '../functions/api/login.js';
 import {onRequestPost as logout} from '../functions/api/logout.js';
 const root = resolve('.');
-const env = {AUTH_USER:'test', AUTH_PASSWORD:'test-password', SESSION_SECRET:'a'.repeat(40)};
+const env = {AUTH_USER:'test', AUTH_PASSWORD:'test-password', AUTH_USER_2:'second', AUTH_PASSWORD_2:'second-password', SESSION_SECRET:'a'.repeat(40)};
 let slowNextApp = false;
 const types = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.webmanifest':'application/manifest+json', '.png':'image/png'};
 http.createServer(async (req,res) => {

@@ -64,6 +64,8 @@ python3 tests/e2e/home.py URL    # 分頁、分頁碼、收藏、滑動、刪除
 
 在 Cloudflare Pages 連接 GitHub 儲存庫，使用無建置的靜態站設定：不設定建置指令，輸出目錄為專案根目錄（`/`）。在 Pages 環境設定 `AUTH_USER`、`AUTH_PASSWORD`、`SESSION_SECRET`（至少 32 個字元），密碼與密鑰使用加密環境變數，不要提交至儲存庫。每次修改快取外殼時更新 `sw.js` 的 CACHE_NAME；可執行 `python3 scripts/check_cache_bump.py origin/main HEAD` 檢查兩個提交。
 
-本機可安裝 Wrangler 後以 `wrangler pages dev .` 啟動，使用未追蹤的 `.dev.vars` 設定上述三個變數。部署前請另外測試 HTTPS 和目標裝置。
+可選擇另外設定 `AUTH_USER_2` 與 `AUTH_PASSWORD_2`，兩者都設定且帳號名稱不同於 `AUTH_USER` 時才啟用第二組；只設定其中一項或帳號名稱相同時會忽略第二組。兩組權限相同，變更其中一組的帳號或密碼只會讓該組原有工作階段失效。第一組的 `AUTH_USER`、`AUTH_PASSWORD` 與 `SESSION_SECRET` 仍為必填；缺少任一項或密鑰不足 32 字元時，受保護資源會回傳 503。
+
+本機可安裝 Wrangler 後以 `wrangler pages dev .` 啟動，使用未追蹤的 `.dev.vars` 設定上述必要變數及選用的第二組帳密。部署前請另外測試 HTTPS 和目標裝置。
 
 `status.json` 的 `enabled` 設為 `false` 可讓下次線上啟動顯示停用訊息，移除本 App 的 Service Worker 快取，保留 IndexedDB 圖面及標記。離線或無法取得狀態時仍可開啟已快取的外殼；網路請求逾 4 秒也會回退快取，逾時後才收到的登入拒絕不會阻止這次開啟，因此遠端停用、登出與密碼更換無法即時阻止離線或連線緩慢的裝置使用本機資料；取得裝置的人也可能存取本機儲存內容。登入使用共用帳密與有效期 90 天的工作階段，登出僅清除目前瀏覽器的 Cookie，並非資料加密；錯誤登入僅固定延遲，正式使用應另設 Cloudflare 層級的速率限制。
