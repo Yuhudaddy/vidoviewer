@@ -1,0 +1,104 @@
+/*
+ * VidoViewer 設計變數（第 7 版，2026-11-24，量測結果手動儲存、資料庫排序、匯出底色、檔案大小上限）
+ * 來源：「冰藍・深色玻璃 Dock」參考稿。使用者決定只有深色模式，沒有淺色。
+ * 所有權：本檔與元件 CSS 由設計維護；渲染器與互動程式讀取變數，不寫死色碼。
+ * 限制：站台 CSP 為 default-src 'self'，不可使用行內 style 屬性、行內 <style>、外部字型。
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* 字型：只用裝置內建字型 */
+  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-num: ui-monospace, "SF Mono", Menlo, Consolas, monospace; /* 讀數、座標、標註數字；搭配 font-variant-numeric: tabular-nums */
+
+  /* 字級：最小 12。輸入控制項一律 16，避免 iOS 自動放大。 */
+  --text-12: 12px; /* 標籤、工具名稱、副標 */
+  --text-14: 14px; /* 檔名、次要說明、提示 */
+  --text-16: 16px; /* 內文、輸入框、按鈕 */
+  --text-18: 18px; /* 對話框標題 */
+  --text-24: 24px; /* 主要讀數 */
+
+  /* 間距尺度 */
+  --space-4: 4px; --space-8: 8px; --space-12: 12px; --space-16: 16px; --space-24: 24px; --space-32: 32px;
+
+  /* 顏色：圖紙、面板、文字、次要文字、白、冰藍（僅圖上）、提醒 */
+  --canvas: #212830;                 /* 圖紙底色，也是 CAD 的 ACI 7 反白基準 */
+  --glass: rgba(49, 55, 63, .70);    /* 面板。空白處等同參考稿的白 7%，但能壓暗後方亮線 */
+  --glass-solid: #31373F;            /* 不支援背景模糊時的面板底色 */
+  --text: #E6ECF2;
+  --text-2: #9FB0C0;
+  --ui-on: #FFFFFF;                  /* 白：選取中、主要按鈕、讀數 */
+  --ui-on-ink: #0B1218;              /* 白色上的文字 */
+  --accent: #4CD7F6;                 /* 冰藍：只用在圖上的量測、鎖點、掣點、數字膠囊 */
+  --on-accent: #0B1218;              /* 冰藍上的文字 */
+  --warn: #F5B454;                   /* 提醒：單位未設定、已略過物件 */
+
+  /* 由上列顏色衍生 */
+  --glass-edge: rgba(255, 255, 255, .14);
+  --glass-shadow: inset 0 1px 1px rgba(255, 255, 255, .22), inset 0 -1px 1px rgba(255, 255, 255, .06); /* 液態玻璃：只有玻璃邊緣的亮線，沒有外側陰影 */
+  --glass-blur: blur(22px) saturate(160%);
+  --accent-soft: rgba(76, 215, 246, .14);          /* 圖上的觸點範圍與面積填色 */
+  --ui-on-soft: rgba(255, 255, 255, .14);          /* 選取中的底 */
+  --ui-on-edge: rgba(255, 255, 255, .55);          /* 選取中的邊 */
+  --ui-on-highlight: rgba(255, 255, 255, .30);     /* 選取中工具的上緣高光（原名 --accent-highlight） */
+  --ghost-edge: rgba(255, 255, 255, .22);
+  --scrim: rgba(8, 11, 15, .55);
+  --hair: rgba(255, 255, 255, .08);                /* 列與列的分隔線 */
+  --field: rgba(8, 11, 15, .30);                   /* 輸入欄底色 */
+  --thumb: #171C22;                                /* 縮圖底色 */
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--ui-on);
+
+  /* 開關開啟（鎖點、逐點封閉的「封閉」）：文字與圖示用白、淡紫、淡綠、淡藍的漸層，不填滿；光暈兩層（2px 與 5px），小而看得見 */
+  --toggle-c1: #FFFFFF; --toggle-c2: #DCCBFF; --toggle-c3: #C4FFE0; --toggle-c4: #B8E6FF;
+  --toggle-gradient: linear-gradient(90deg, var(--toggle-c1) 0%, var(--toggle-c2) 38%, var(--toggle-c3) 70%, var(--toggle-c4) 100%);
+  --toggle-glow: drop-shadow(0 0 2px rgba(220, 215, 255, .6)) drop-shadow(0 0 5px rgba(190, 200, 255, .35));
+
+  /* 尺寸（照參考稿）。垂直位置跟著手機實際高度與 safe-area 走；高度 640px 以下由 components.css 覆寫成精簡尺寸 */
+  --edge-gap: 16px;        /* 懸浮面板距螢幕邊緣 */
+  --hit-min: 44px;         /* 任何可點目標的最小邊長 */
+  --round-btn: 48px;       /* 左上返回、右上圖層 */
+  --tool-btn: 60px;        /* Dock 內的工具與鎖點開關；工具選取中為 64px */
+  --tool-btn-on: 64px;
+  --dock-h: 76px; --dock-r: 38px;          /* Dock 底緣：max(16px, safe-area-inset-bottom - 8px) */
+  --readout-h: 68px; --readout-r: 26px; --readout-gap: 12px; /* 讀數卡與操作列在 Dock 上方 12px */
+  --title-h: 48px; --title-r: 24px;        /* 頂端位置不寫死：safe-area-inset-top + 12px（Safari 分頁內為 12px，加入主畫面後約 59 至 71px） */
+  --zoom-w: 48px; --zoom-h: 150px; --zoom-r: 24px; --zoom-right: 14px; /* 右側縮放鈕在可用高度內垂直置中再往上 20px */
+  --card-r: 26px; --card-pad: 24px; --card-gap: 16px; --card-inset: 24px;
+  --btn-h: 48px; --btn-r: 24px;
+  --actionbar-h: 52px; --actionbar-btn-w: 64px; /* 逐點封閉的操作列：封閉、退回、清除 */
+  --notice-h: 44px; --notice-r: 22px;
+  --pill-h: 26px; --pill-r: 13px;
+  --sheet-r: 30px; --sheet-inset: 8px;             /* 下方面板：圖層、校正單位 */
+  --row-h: 52px;                                   /* 圖層列 */
+  --menu-w: 196px;                                 /* 「更多」選單，在 Dock 上方 12px、靠右 */
+  --tile-r: 16px;                                  /* 主畫面：塊狀縮圖圓角 */
+  --tabs-h: 64px; --tab-w: 84px; --tabs-gap: 12px; /* 主畫面底部的分頁膠囊：最近、收藏、資料庫；膠囊與加號相距 --tabs-gap */
+  --lrow-h: 72px; --lrow-action-w: 72px;           /* 條列的列高；左滑露出的動作鈕每顆寬度 */
+  --fab-size: 56px;                                /* 右下角的匯入按鈕 */
+  --fab-shadow: 0 0 0 0 transparent; /* 沒有陰影，保留這個變數是因為焦點環要和它合併 */
+  --page-size: 20;                                 /* 圖面清單一頁最多幾個，程式讀取 */
+  --file-limit-mb: 60;                             /* 檔案大小上限（MB），程式讀取。數字待使用者確認，只改這裡 */
+  --file-warn-mb: 30;                              /* 超過這個大小（MB），載入卡多一行大檔提醒，程式讀取 */
+  --loupe-d: 112px;        /* 放大鏡直徑，倍率 3，中心在觸點上方約 90px；觸點靠近上緣時改到下方 */
+
+  /* 圖面上由 App 畫的東西。渲染器以 getComputedStyle 讀取。
+     CAD 原生圖元線寬一律 1 個裝置像素，顏色用圖檔圖層的 ACI 原色。 */
+  --measure-w: 1.25;       /* 量測線、延伸線，CSS px */
+  --measure-casing-w: 3.25;/* 量測線下方的底色襯邊，顏色 --canvas */
+  --measure-dash: 6 4;     /* 尚未確定的量測線 */
+  --measure-arrow: 10;     /* 實心箭頭長度，寬為長的 1/3 */
+  --measure-offset: 22;    /* 標註線離量測點的距離 */
+  --grip: 7;               /* 已放置的點：方形掣點，--accent 填色、--canvas 1px 外框 */
+  --snap: 14;              /* 鎖點標記外框：端點方形、中點三角形、圓心圓形、交點叉形 */
+  --snap-w: 1.75;
+  --touch-ring: 44;        /* 長按時的觸點範圍直徑，--accent-soft 填色、虛線 3 3 */
+  --hit-slop: 22;          /* 點選圖元與量測點時的命中半徑 */
+
+  /* 動效：只用在回饋與狀態變化 */
+  --dur-fast: 120ms;       /* 按下、選取 */
+  --dur-base: 200ms;       /* 面板出現、縮放鈕收起 */
+  --dur-spin: 900ms;       /* 載入圈圈每圈時間，等速 */
+  --snap-hold: 800ms;      /* 點一下之後鎖點標記停留的時間 */
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}

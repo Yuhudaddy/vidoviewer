@@ -1,0 +1,35 @@
+/* 登入頁在密碼閘門之前載入，拿不到 /styles/tokens.css，所以這裡複製用到的設計變數（來源：tokens.css）。 */
+:root {
+  color-scheme: dark;
+  --canvas: #212830; --text: #E6ECF2; --text-2: #9FB0C0;
+  --ui-on: #FFFFFF; --ui-on-ink: #0B1218; --warn: #F5B454;
+  --field: rgba(8, 11, 15, .30); --glass-edge: rgba(255, 255, 255, .14);
+  --focus-ring: 0 0 0 2px var(--canvas), 0 0 0 4px var(--ui-on);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; min-height: 100dvh;
+  padding: max(24px, 16vh) 24px 24px;
+  background: var(--canvas); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+main { width: min(100%, 360px); margin: 0 auto; }
+.brand { display: flex; align-items: center; gap: 12px; margin: 0 0 32px; font-size: 24px; font-weight: 700; letter-spacing: .2px; }
+.brand img { border-radius: 12px; }
+form { display: grid; gap: 16px; }
+label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; color: var(--text-2); }
+input[name=username], input[name=password] {
+  width: 100%; height: 52px; padding: 0 16px;
+  font: inherit; font-size: 16px; color: var(--text);
+  background: var(--field); border: 1px solid var(--glass-edge); border-radius: 16px;
+}
+input:focus-visible, button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+#error { margin: 0; font-size: 14px; color: var(--warn); }
+#error[hidden] { display: none; }
+button {
+  height: 52px; margin-top: 8px; border: 0; border-radius: 26px;
+  font: inherit; font-size: 16px; font-weight: 700;
+  color: var(--ui-on-ink); background: var(--ui-on); cursor: pointer;
+}
+button:active { scale: .97; }
+@media (prefers-reduced-motion: reduce) { button:active { scale: 1; } }

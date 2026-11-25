@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VidoViewer">
+<meta name="theme-color" content="#212830">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; worker-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'">
+<link rel="icon" href="./icons/icon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./styles/tokens.css">
+<link rel="stylesheet" href="./styles/components.css">
+<link rel="stylesheet" href="./design-bridge.css">
+<link rel="stylesheet" href="./readout-adjustments.css">
+<title>VidoViewer</title>
+</head>
+<body>
+<svg class="app-sprite" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="vv-toggle-grad" gradientUnits="userSpaceOnUse" x1="2" y1="2" x2="22" y2="22"><stop offset="0" class="vv-toggle-stop--1"/><stop offset=".38" class="vv-toggle-stop--2"/><stop offset=".7" class="vv-toggle-stop--3"/><stop offset="1" class="vv-toggle-stop--4"/></linearGradient>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.8"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 4l2.5 5.1 5.6.8-4 3.9.9 5.6L12 16.8l-5 2.6.9-5.6-4-3.9 5.6-.8z"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><path d="M5 7c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3zM5 7v10c0 1.7 3.1 3 7 3s7-1.3 7-3V7M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle class="vv-icon__fill" cx="5" cy="12" r="1.8"/><circle class="vv-icon__fill" cx="12" cy="12" r="1.8"/><circle class="vv-icon__fill" cx="19" cy="12" r="1.8"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h12l3 3v15H4V3h1zM8 3v6h8V3M8 21v-8h8v8"/></symbol>
+    <symbol id="t-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.6a2.4 2.4 0 1 1 3.5 2.1c-.8.5-1.2 1-1.2 1.9M12 16.5v.2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7zM14 3v5h5"/></symbol>
+    <symbol id="i-snap" viewBox="0 0 24 24"><path d="M5 5h14v14H5z"/><path class="vv-icon__fill" d="M2.5 2.5h5v5h-5z"/></symbol>
+    <symbol id="i-zoom-hint" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4M11 8.5v5M8.5 11h5"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4.5M12 17.5v.5"/></symbol>
+    <symbol id="t-dist" viewBox="0 0 24 24"><path d="M4 20L20 4M4 15.5V20h4.5M15.5 4H20v4.5"/></symbol>
+    <symbol id="t-area" viewBox="0 0 24 24"><path d="M5 17L7 7l9-2 3 9-5 5z"/></symbol>
+    <symbol id="t-closed" viewBox="0 0 24 24"><path d="M5 17L7 7l9-2 3 9-5 5z"/></symbol>
+    <symbol id="t-polygon" viewBox="0 0 24 24"><path d="M5 17L7 7l9-2 3 9-5 5"/><circle cx="5" cy="17" r="1.7" fill="currentColor" stroke="none"/><circle cx="7" cy="7" r="1.7" fill="currentColor" stroke="none"/><circle cx="16" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="14" r="1.7" fill="currentColor" stroke="none"/><circle cx="14" cy="19" r="1.7" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8 6l-5 5 5 5M3 11h11a5 5 0 0 1 0 10h-2"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  </defs>
+</svg>
+
+<main class="vv-app">
+  <div id="library">
+    <section class="vv-home" id="homeScroll" aria-label="圖面清單">
+      <div class="vv-home__top"><h1 class="vv-brand"><img src="./icons/icon-96.png" alt="" width="32" height="32">VidoViewer</h1>
+        <div class="vv-home__actions">
+          <button class="vv-icon-btn" type="button" id="searchToggle" aria-label="搜尋" aria-expanded="false" aria-controls="searchBar"><svg class="vv-icon" aria-hidden="true"><use href="#i-search"/></svg></button>
+          <button class="vv-icon-btn" type="button" id="helpOpen" aria-label="使用說明" aria-haspopup="dialog"><svg class="vv-icon" aria-hidden="true"><use href="#i-help"/></svg></button>
+        </div>
+      </div>
+      <div class="app-search" id="searchBar" role="search" hidden>
+        <label class="vv-field vv-field--text"><svg class="vv-field__icon" aria-hidden="true"><use href="#i-search"/></svg><input class="vv-field__input" type="search" id="searchInput" placeholder="搜尋" aria-label="依檔名搜尋" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></label>
+        <button class="vv-icon-btn" type="button" id="searchClear" aria-label="清除搜尋"><svg class="vv-icon" aria-hidden="true"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="vv-home__panel" id="homePanel" role="tabpanel">
+        <div class="vv-viewbar" id="viewbar" hidden>
+          <span class="vv-viewbar__count" id="homeCount"></span>
+          <div class="vv-viewtoggle" role="group" aria-label="顯示方式">
+            <button class="vv-icon-btn" type="button" id="viewGrid" aria-label="塊狀" aria-pressed="true"><svg class="vv-icon" aria-hidden="true"><use href="#i-grid"/></svg></button>
+            <button class="vv-icon-btn" type="button" id="viewList" aria-label="條列" aria-pressed="false"><svg class="vv-icon" aria-hidden="true"><use href="#i-list"/></svg></button>
+          </div>
+        </div>
+        <div id="drawingList"></div>
+        <p class="vv-none" id="homeEmpty" hidden></p>
+        <div class="vv-pager" id="pager" hidden>
+          <button class="vv-icon-btn" type="button" id="pagePrev" aria-label="上一頁"><svg class="vv-icon" aria-hidden="true"><use href="#i-prev"/></svg></button>
+          <span id="pageLabel" aria-live="polite"></span>
+          <button class="vv-icon-btn" type="button" id="pageNext" aria-label="下一頁"><svg class="vv-icon" aria-hidden="true"><use href="#i-next"/></svg></button>
+        </div>
+        <div class="vv-usage vv-usage--inline" id="usage" hidden><span>已使用 <b class="vv-usage__v" id="usageValue"></b></span></div>
+      </div>
+    </section>
+    <div class="vv-glass vv-tabs" role="tablist" aria-label="圖面分類" id="tabs">
+      <span class="app-tab-indicator" id="tabIndicator" aria-hidden="true"></span>
+      <button class="vv-tab" type="button" role="tab" id="tab-recent" data-tab="recent" aria-controls="homePanel" aria-selected="false"><svg class="vv-icon" aria-hidden="true"><use href="#i-clock"/></svg>最近</button>
+      <button class="vv-tab" type="button" role="tab" id="tab-favorites" data-tab="favorites" aria-controls="homePanel" aria-selected="false"><svg class="vv-icon" aria-hidden="true"><use href="#i-star"/></svg>收藏</button>
+      <button class="vv-tab" type="button" role="tab" id="tab-library" data-tab="library" aria-controls="homePanel" aria-selected="false"><svg class="vv-icon" aria-hidden="true"><use href="#i-db"/></svg>資料庫</button>
+    </div>
+    <button class="vv-fab" type="button" id="import" aria-label="匯入圖面"><svg class="vv-icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+    <div class="vv-glass vv-menu" role="menu" aria-label="更多" id="tileMenu" hidden>
+      <button class="vv-menu__item" type="button" role="menuitem" id="menuFavorite"><svg class="vv-icon" aria-hidden="true"><use href="#i-star"/></svg><span id="menuFavoriteLabel">收藏</span></button>
+      <button class="vv-menu__item vv-menu__item--muted" type="button" role="menuitem" id="menuDelete"><svg class="vv-icon" aria-hidden="true"><use href="#t-trash"/></svg>刪除</button>
+    </div>
+    <div class="vv-glass vv-toast" id="toast" role="status" hidden><span id="toastText"></span><button class="vv-link" type="button" id="toastUndo">復原</button></div>
+    <section class="vv-glass vv-sheet" id="helpSheet" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+      <div class="vv-sheet__grab"></div>
+      <div class="vv-sheet__head"><h2 class="vv-sheet__title" id="helpTitle">使用說明</h2><button class="vv-icon-btn" type="button" id="helpClose" aria-label="關閉"><svg class="vv-icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <ul class="vv-help" id="helpList" tabindex="0">
+        
+        <li data-topic="import">右下角的＋匯入 DWG 或 DXF</li>
+        <li data-topic="files">LINE 或雲端收到的圖，先存到 iPhone 的「檔案」再匯入</li>
+        <li data-topic="pan-zoom">單指移動，雙指縮放</li>
+        <li data-topic="tool">選工具後點圖面放點；面積可選封閉物件或逐點封閉</li>
+        <li data-topic="loupe">長按會出現放大鏡，放開才定點</li>
+        <li data-topic="snap">「鎖點」開著時，點會吸到端點、中點、圓心、交點</li>
+        <li data-topic="marks">按「儲存標記」才會加入標記清單，原檔不會被改動</li>
+        <li data-topic="unit">點圖面檔名可設定來源單位與顯示單位</li>
+        <li data-topic="swipe">條列模式往左滑，可以收藏或刪除</li>
+      </ul>
+      <div class="vv-sheet__links"><form action="/api/logout" method="post"><button class="vv-link" type="submit" id="logout">登出</button></form><button class="vv-link" type="button" id="example">開啟範例圖</button></div>
+    </section>
+  </div>
+
+  <section class="app-viewer" id="viewerLayer" aria-label="圖面" hidden>
+    <canvas id="drawing" class="app-canvas" aria-label="圖面畫布"></canvas>
+    <button class="vv-glass vv-round-btn vv-round-btn--start" type="button" id="open" aria-label="返回圖面清單"><svg class="vv-icon" aria-hidden="true"><use href="#i-back"/></svg></button>
+    <div class="vv-glass vv-titlebar"><button class="vv-titlebar__title app-filename" id="filename" type="button" aria-label="設定圖面單位"></button></div>
+    <div class="app-unit-hint" id="unitHint" aria-live="polite"></div>
+    <div class="app-speed">
+      <button class="vv-glass app-speed__toggle" id="speedToggle" type="button" aria-label="開啟功能選單" aria-expanded="false" aria-controls="speedMenu"><svg class="vv-icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <div class="vv-glass app-speed__menu" id="speedMenu" hidden>
+        <button type="button" id="viewerHelpOpen">使用說明</button><button type="button" id="marksOpen">標記清單</button>
+      </div>
+    </div>
+    <div class="vv-notices">
+      <div class="vv-glass vv-notice vv-notice--warn" id="drawingWarning" role="status" hidden><svg class="vv-notice__icon" aria-hidden="true"><use href="#i-warn"/></svg><span id="drawingWarningText"></span><button class="vv-icon-btn" type="button" id="drawingWarningClose" aria-label="關閉圖面解析提示"><svg class="vv-icon" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+      <div class="vv-glass vv-notice vv-notice--warn" id="notice" role="status" hidden><svg class="vv-notice__icon" aria-hidden="true"><use href="#i-warn"/></svg><span id="noticeText"></span></div>
+      <div class="vv-glass vv-notice" id="budgetNotice" role="status" hidden><svg class="vv-notice__icon" aria-hidden="true"><use href="#i-zoom-hint"/></svg>放大以顯示細節</div>
+    </div>
+    <div class="vv-side" id="side">
+      <div class="vv-glass vv-zoom" role="group" aria-label="縮放">
+        <button class="vv-zoom__btn" type="button" id="zoomIn" aria-label="放大"><svg class="vv-icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        <button class="vv-zoom__btn vv-zoom__btn--fit" type="button" id="fit" aria-label="顯示全圖"><svg class="vv-icon" aria-hidden="true"><use href="#i-fit"/></svg></button>
+        <button class="vv-zoom__btn" type="button" id="zoomOut" aria-label="縮小"><svg class="vv-icon" aria-hidden="true"><use href="#i-minus"/></svg></button>
+      </div>
+    </div>
+    <div class="vv-pill" id="measurementPill" hidden></div>
+    <div class="vv-loupe" id="loupeBox" aria-hidden="true" hidden><canvas id="loupe"></canvas></div>
+    <div class="vv-pill vv-pill--tag" id="lockTag" aria-hidden="true" hidden></div>
+    <div class="vv-glass vv-readout vv-readout--top" id="result" aria-live="polite" hidden>
+      <div class="vv-readout__main"><div class="vv-readout__label" id="resultLabel"></div><div class="vv-readout__value"><span id="resultValue"></span> <span class="vv-readout__unit" id="resultUnit"></span></div></div>
+      <div class="vv-readout__aside"><div id="resultLine1"></div><div id="resultLine2"></div></div>
+      <div class="app-readout-actions"><button class="vv-icon-btn app-save" type="button" id="saveMark" aria-label="儲存標記"><svg class="vv-icon" aria-hidden="true"><use href="#i-save"/></svg></button><button class="vv-icon-btn vv-readout__clear" type="button" id="clear" aria-label="清除目前量測"><svg class="vv-icon" aria-hidden="true"><use href="#t-trash"/></svg></button></div>
+    </div>
+    <div class="app-area-menu" id="areaMenu" hidden><button class="vv-glass" type="button" id="areaClosed" aria-pressed="false"><svg class="vv-icon" aria-hidden="true"><use href="#t-closed"/></svg>封閉面積</button><button class="vv-glass" type="button" id="polygon" aria-pressed="false"><svg class="vv-icon" aria-hidden="true"><use href="#t-polygon"/></svg>逐點封閉</button></div>
+    <div class="vv-glass vv-actionbar" id="polygonActions" hidden><span class="app-sr-only" id="polygonStatus" role="status">請點選至少 3 個點</span><button class="vv-actionbar__btn vv-actionbar__btn--toggle" type="button" id="polygonClose" aria-pressed="true"><span class="vv-actionbar__label">封閉</span></button><button class="vv-actionbar__btn" type="button" id="polygonBack" aria-label="退回上一點">退回</button><button class="vv-actionbar__btn" type="button" id="polygonClear" aria-label="清除這次的逐點封閉">清除</button></div>
+    <button class="vv-glass app-undo" type="button" id="undoMeasurement" aria-label="復原上一個量測狀態" disabled><svg class="vv-icon" aria-hidden="true"><use href="#i-undo"/></svg></button>
+    <div class="vv-glass vv-dock" role="toolbar" aria-label="量測工具"><span id="dockIndicator" class="app-dock-indicator" aria-hidden="true" hidden></span>
+      <button class="vv-tool" type="button" id="measure" aria-pressed="false"><svg class="vv-tool__icon" aria-hidden="true"><use href="#t-dist"/></svg><span class="vv-tool__label">距離</span></button>
+      <button class="vv-tool" type="button" id="area" aria-expanded="false" aria-controls="areaMenu"><svg class="vv-tool__icon" aria-hidden="true"><use href="#t-area"/></svg><span class="vv-tool__label">面積</span></button>
+      <button class="vv-tool" type="button" id="clearDock"><svg class="vv-tool__icon" aria-hidden="true"><use href="#t-trash"/></svg><span class="vv-tool__label">清除</span></button>
+      <span class="vv-dock__sep" aria-hidden="true"></span>
+      <button class="vv-tool vv-tool--toggle" type="button" id="snap" aria-pressed="true"><svg class="vv-tool__icon" aria-hidden="true"><use href="#i-snap"/></svg><span class="vv-tool__label">鎖點</span></button>
+    </div>
+  </section>
+
+  <div class="app-overlay" id="unitDialog" hidden><div class="vv-scrim"></div><section class="vv-glass vv-card app-settings" id="unitPanel" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="unitTitle"><h2 class="vv-card__title" id="unitTitle">單位設定</h2><p id="unitStatus">請確認圖面來源單位，設定僅套用本次開圖。</p><label>圖面來源 <select id="sourceUnit"><option value="">未知／未設定</option><option>mm</option><option>cm</option><option>m</option><option>in</option><option>ft</option></select></label><label>顯示單位 <select id="displayUnit"><option>cm</option><option>mm</option><option>m</option><option>in</option><option>ft</option></select></label><button class="vv-btn vv-btn--primary" type="button" id="unitClose">完成</button></section></div>
+  <div class="app-overlay" id="marksDialog" hidden><div class="vv-scrim"></div><section class="vv-glass vv-card app-settings" role="dialog" aria-modal="true" aria-labelledby="marksTitle"><h2 class="vv-card__title" id="marksTitle">標記清單</h2><div id="marksList"></div><button class="vv-btn vv-btn--primary" type="button" id="marksClose">關閉</button></section></div>
+  <div class="app-overlay" id="viewerHelp" hidden><div class="vv-scrim"></div><section class="vv-glass vv-card app-settings" role="dialog" aria-modal="true" aria-labelledby="viewerHelpTitle"><h2 class="vv-card__title" id="viewerHelpTitle">使用說明</h2><p>單指平移，雙指縮放。選擇距離後點兩點；點面積展開選單，選擇封閉物件後點圖面邊界。逐點封閉至少三點，按完成計算面積與周長，或按取消放棄。鎖點可吸附圖面上的點，長按可使用放大鏡。來源單位未知時請先確認並設定。清除目前量測不會儲存標記。</p><button class="vv-btn vv-btn--primary" type="button" id="viewerHelpClose">關閉</button></section></div>
+  <div id="loading" hidden>
+    <div class="vv-scrim"></div>
+    <section class="vv-glass vv-card" aria-labelledby="loadingName">
+      <div><h2 class="vv-card__title" id="loadingName"></h2><div class="vv-card__meta" id="loadingSize"></div></div>
+      <div class="vv-status" role="status"><svg class="vv-status__icon" viewBox="0 0 20 20" aria-hidden="true"><circle class="vv-status__track" cx="10" cy="10" r="7"/><path class="vv-status__arc" d="M10 3a7 7 0 0 1 7 7"/></svg><span id="loadingStage"></span></div>
+      <div class="vv-card__actions"><button class="vv-btn vv-btn--ghost" type="button" id="cancelLoading">取消</button></div>
+    </section>
+  </div>
+
+  <div id="dialog" hidden>
+    <div class="vv-scrim"></div>
+    <section class="vv-glass vv-card" role="alertdialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogText">
+      <h2 class="vv-card__title" id="dialogTitle"></h2>
+      <div class="vv-card__meta" id="dialogText"></div>
+      <div class="vv-card__actions"><button class="vv-btn vv-btn--ghost" type="button" id="dialogCancel"></button><button class="vv-btn vv-btn--primary" type="button" id="dialogConfirm"></button></div>
+    </section>
+  </div>
+
+  <input id="file" type="file" accept=".dwg,.dxf" multiple hidden>
+</main>
+<script type="module" src="./bootstrap.js"></script>
+</body>
+</html>

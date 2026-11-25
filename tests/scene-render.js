@@ -1,0 +1,9 @@
+import {Renderer} from '../renderer.js';
+import {snapAt} from '../core/query.js';
+const empty=()=>({lines:new Float64Array(),lineAttr:new Int32Array(),arcs:new Float64Array(),arcAttr:new Int32Array(),circles:new Float64Array(),circleAttr:new Int32Array(),points:new Float64Array(),pointAttr:new Int32Array(),polys:{pts:new Float64Array(),bulges:new Float64Array(),offsets:new Uint32Array([0]),closed:new Uint8Array(),attr:new Int32Array()},solids:new Float64Array(),solidAttr:new Int32Array(),inserts:{m:new Float64Array(),proto:new Int32Array(),attr:new Int32Array()},texts:[],hatches:[]});
+const line=(l,attr)=>Object.assign(empty(),{lines:new Float64Array(l),lineAttr:new Int32Array(attr)});
+const model=line([0,0,10,0],[1,-1]);model.inserts={m:new Float64Array([0,2,-2,0,100,50]),proto:new Int32Array([0]),attr:new Int32Array([1,-1])};
+const block=line([0,0,1,0],[0,-1]);block.bbox=[0,0,1,0];const dim=line([20,20,30,20],[1,-1]);dim.bbox=[20,20,30,20];
+const scene={extents:{min:{x:0,y:0},max:{x:105,y:55}},layers:[{name:'0',color:0xffffff,visible:true},{name:'WALL',color:0xff0000,visible:true}],model,protos:[block,dim],dimensions:[{proto:1}],unit:null};
+const renderer=new Renderer(document.querySelector('canvas'));renderer.setScene(scene);const found=[];renderer.walk((e,m)=>found.push({e,m}));const b=found.find(x=>x.m[4]===100),d=found.find(x=>x.e.p1.x===20);const world={x:b.m[0]*b.e.p2.x+b.m[2]*b.e.p2.y+b.m[4],y:b.m[1]*b.e.p2.x+b.m[3]*b.e.p2.y+b.m[5]};const snap=snapAt(scene,{x:100.2,y:52.1},3)?.point;
+window.testResults=[{name:'model',pass:found.length===3},{name:'transformed insert',pass:world.x===100&&world.y===52},{name:'layer 0 inheritance',pass:b.e.color==='#ff0000'},{name:'dimension prototype',pass:!!d},{name:'transformed endpoint snap',pass:!!snap&&snap.x===100&&snap.y===52}];document.body.insertAdjacentText('beforeend',JSON.stringify(window.testResults));

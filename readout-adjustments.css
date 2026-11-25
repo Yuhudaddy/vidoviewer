@@ -1,0 +1,51 @@
+/* 讀數維持左右對照；長單位可換行，不遮住操作按鈕。 */
+.app-unit-hint { display: none; }
+.vv-readout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; grid-template-areas: "main aside actions"; column-gap: 6px; align-items: center; }
+.vv-readout__main { grid-area: main; min-width: 0; }
+.vv-readout__value { white-space: normal; overflow-wrap: anywhere; }
+.vv-readout__aside { grid-area: aside; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; min-width: 0; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
+.vv-readout__aside > :empty { display: none; }
+.app-readout-actions { grid-area: actions; display: flex; flex-direction: row; align-items: center; }
+#saveMark, #clear { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
+#saveMark svg, #clear svg { display: block; margin: auto; }
+#drawingWarning { min-height: 44px; padding: 0 4px 0 12px; font-size: 12px; }
+#drawingWarningText { flex: 1; min-width: 0; }
+#drawingWarningClose { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
+#drawingWarningClose svg { display: block; margin: auto; }
+
+/* 只收緊看圖頁；避開瀏海與 Home 指示條，按鈕仍至少 44px。 */
+:root {
+  --vv-top: max(4px, env(safe-area-inset-top, 0px));
+  --vv-dock-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) - 12px)); /* iPhone 有 Home 指示條時 22px，和原生 App 的浮動分頁列一樣貼近底邊 */
+}
+.vv-home { padding-top: var(--vv-top); }
+.app-viewer {
+  --vv-top: max(4px, env(safe-area-inset-top, 0px));
+  --title-h: 44px; --round-btn: 44px;
+  --dock-h: 56px; --dock-r: 28px; --tool-btn: 48px; --tool-btn-on: 48px;
+  --readout-h: 52px; --vv-readout-value: 18px; --readout-gap: 20px;
+  --toggle-glow: drop-shadow(0 0 2px rgba(220, 215, 255, .6)) drop-shadow(0 0 5px rgba(190, 200, 255, .35));
+  --vv-dock-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) - 12px)); /* iPhone 有 Home 指示條時 22px，和原生 App 的浮動分頁列一樣貼近底邊 */
+  --vv-after-header: calc(var(--vv-top) + var(--title-h) + var(--space-12));
+  --vv-readout-bottom: calc(var(--vv-dock-bottom) + var(--dock-h) + var(--readout-gap));
+}
+.app-viewer .app-filename { width: 100%; min-height: 44px; font-size: 13px; line-height: 1.25; }
+.app-viewer .vv-actionbar__btn, .app-viewer .app-area-menu button { font-size: 14px; }
+/* 面積選單：兩個按鈕之間的距離＝下面那顆到 Dock 上緣的距離，只調這一個數字 */
+:root {
+  --area-menu-gap: 12px;    /* 「封閉面積」與「逐點封閉」之間的距離 */
+  --area-menu-offset: 16px; /* 「逐點封閉」下緣到 Dock 膠囊上緣的距離（畫面上看得到的那條邊；到「面積」按鈕還要再加膠囊內側的 4px） */
+  --undo-gap: 12px;         /* 右下角返回鈕離 Dock 上緣的距離 */
+}
+.app-area-menu { gap: var(--area-menu-gap); }
+@media (max-height: 440px) and (min-width: 600px) {
+  .app-viewer { --actionbar-btn-w: 56px; }
+  .app-viewer .vv-actionbar { inset-inline: var(--vv-left) auto; margin-inline: 0; }
+  .app-viewer .vv-actionbar__btn { padding-inline: 8px; }
+  .app-viewer.area-menu-open .vv-notices { left: calc(var(--app-area-menu-right) + 12px); right: calc(var(--vv-right) + 56px); }
+  .app-viewer.speed-menu-open .vv-notices { right: calc(100% - var(--app-speed-menu-left) + 12px); }
+  .app-viewer.speed-menu-open .app-undo { right: calc(var(--vv-right) + 185px); }
+}
+@supports (height: 100dvh) { .vv-app { height: 100dvh; bottom: auto; } }
+
+.service-disabled { padding: 3rem; color: #eef4f8; background: #171e25; min-height: 100vh; font: 1.2rem system-ui, sans-serif; }

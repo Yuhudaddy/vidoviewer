@@ -1,0 +1,1820 @@
+/*
+ * VidoViewer 元件樣式（第 3 版）
+ * 依據：已定案畫面稿，數值與畫面稿一致。
+ * 規則：顏色、尺寸、動效一律讀 tokens.css 的變數；本檔不寫色碼。
+ * 用色：介面的選取、主要按鈕、讀數用白色（--ui-on 一組）；冰藍只留給畫在圖上的東西。
+ * 定位：所有懸浮面板以 .vv-app 為基準做絕對定位，並納入 safe-area。
+ * 類別命名：.vv-元件、.vv-元件__部件、.vv-元件--變體；狀態用 .is-* 或 ARIA 屬性。
+ */
+
+/* ---------- 版面變數：一律由 safe-area 與可用高度推算，不假設 844 高 ---------- */
+:root {
+  --vv-left: max(var(--edge-gap), env(safe-area-inset-left, 0px));
+  --vv-right: max(var(--edge-gap), env(safe-area-inset-right, 0px));
+  --vv-top: calc(env(safe-area-inset-top, 0px) + var(--space-12));
+  /* 標題列下方第一個元件（讀數卡、提示）的頂緣：標題列底緣再往下 12px，不留別的空間 */
+  --vv-after-header: calc(var(--vv-top) + var(--title-h) + var(--space-12));
+  /* Dock 底緣：下限 16px（精簡尺寸 12px）；Home 指示條較高的機型再往上讓 */
+  --vv-dock-min: var(--space-16);
+  --vv-dock-bottom: max(var(--vv-dock-min), env(safe-area-inset-bottom, 0px) - var(--space-8));
+  --vv-readout-bottom: calc(var(--vv-dock-bottom) + var(--dock-h) + var(--readout-gap));
+  --vv-menu-bottom: calc(var(--vv-dock-bottom) + var(--dock-h) + var(--space-12));
+  --vv-readout-value: var(--text-24);
+  /* 主畫面底部：分頁膠囊的底緣與看圖頁的 Dock 相同；匯入鈕與膠囊垂直置中對齊 */
+  --vv-tab-h: 52px;
+  --vv-fab-bottom: calc(var(--vv-dock-bottom) + (var(--tabs-h) - var(--fab-size)) / 2);
+  --vv-home-bottom: calc(var(--vv-dock-bottom) + var(--tabs-h));   /* 膠囊頂緣到畫面底的距離 */
+  --vv-zoom-right: max(var(--zoom-right), env(safe-area-inset-right, 0px));
+}
+
+[class^="vv-"],
+[class*=" vv-"] {
+  box-sizing: border-box;
+}
+
+/* ---------- 畫面根容器：鋪滿整個可視範圍，控制項再用 safe-area 內縮 ---------- */
+/* html、body 需設 height: 100%; overflow: hidden；主畫面的捲動在 .vv-home 內 */
+.vv-app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--text-16);
+  line-height: 1.7;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 任何元件加 hidden 屬性就不顯示（display 設定不會蓋過它） */
+[class^="vv-"][hidden],
+[class*=" vv-"][hidden] {
+  display: none !important;
+}
+
+/* ---------- 可互動元件的共同基礎 ---------- */
+:is(.vv-round-btn, .vv-titlebar, .vv-zoom__btn, .vv-tool, .vv-btn, .vv-link, .vv-icon-btn, .vv-seg__opt, .vv-menu__item, .vv-option, .vv-sort, .vv-tab, .vv-tile__open, .vv-tile__star, .vv-lrow__open, .vv-lrow__action, .vv-fab, .vv-notice--go, .vv-actionbar__btn) {
+  --vv-shadow: 0 0 0 0 var(--canvas); /* 沒有陰影的元件用零尺寸佔位，方便與焦點環合併 */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    scale var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+/* ---------- 玻璃面板 ---------- */
+.vv-glass {
+  --vv-shadow: var(--glass-shadow);
+  background: var(--glass-solid); /* 不支援背景模糊時的實色底 */
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--vv-shadow);
+  color: var(--text);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .vv-glass {
+    background: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+}
+
+/* ---------- 圖示：22px 線條；實心部件加 .vv-icon__fill ---------- */
+.vv-icon {
+  inline-size: 22px;
+  block-size: 22px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vv-icon__fill {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* ---------- 圓鈕：左上返回、右上圖層 ---------- */
+.vv-round-btn {
+  position: absolute;
+  top: var(--vv-top);
+  inline-size: var(--round-btn);
+  block-size: var(--round-btn);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vv-round-btn--start { left: var(--vv-left); }
+.vv-round-btn--end { right: var(--vv-right); }
+
+/* ---------- 標題膠囊 ---------- */
+.vv-titlebar {
+  position: absolute;
+  top: var(--vv-top);
+  left: calc(var(--vv-left) + var(--round-btn) + var(--space-8));
+  right: calc(var(--vv-right) + var(--round-btn) + var(--space-8));
+  block-size: var(--title-h);
+  border-radius: var(--title-r);
+  padding-inline: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.vv-titlebar__title,
+.vv-titlebar__sub {
+  display: block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vv-titlebar__title {
+  font-size: var(--text-14);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.vv-titlebar__sub {
+  font-family: var(--font-num);
+  font-size: var(--text-12);
+  line-height: 1.3;
+  color: var(--text-2);
+}
+
+/* 單位未設定：副標改成提醒 */
+.vv-titlebar__sub.is-warn {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  color: var(--warn);
+}
+
+/* ---------- 右側：縮放鈕，在可用高度內垂直置中再往上 20px ---------- */
+.vv-side {
+  position: absolute;
+  top: calc(50% - 20px);
+  right: var(--vv-zoom-right);
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  transition:
+    opacity var(--dur-base) var(--ease),
+    translate var(--dur-base) var(--ease),
+    visibility 0s;
+}
+
+/* 只有手指按住（長按放點）時收起，放開就回來；visibility 讓收起後不可聚焦 */
+.vv-side.is-hidden {
+  opacity: 0;
+  translate: var(--space-8) 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-base) var(--ease),
+    translate var(--dur-base) var(--ease),
+    visibility 0s var(--dur-base);
+}
+
+.vv-zoom {
+  inline-size: var(--zoom-w);
+  block-size: var(--zoom-h);
+  border-radius: var(--zoom-r);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.vv-zoom__btn {
+  inline-size: var(--hit-min);
+  block-size: var(--hit-min);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- 讀數卡：沒有量測值也沒有進行中的操作時加 hidden ---------- */
+.vv-readout {
+  position: absolute;
+  left: var(--vv-left);
+  right: var(--vv-right);
+  bottom: var(--vv-readout-bottom);
+  min-block-size: var(--readout-h); /* 標籤那一行放不下而換行時，卡片往上長高 */
+  border-radius: var(--readout-r);
+  padding: var(--space-4) 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  animation: vv-rise var(--dur-base) var(--ease); /* 移除 hidden 時淡入並上移 */
+}
+
+/* 讀數卡放在標題列下方：距離標題列 12px，沒有別的元件夾在中間 */
+.vv-readout--top {
+  top: var(--vv-after-header);
+  bottom: auto;
+}
+
+.vv-readout__main { min-inline-size: 0; }
+
+/* 標籤那一行：標籤後面接次要數值，窄螢幕放不下時自動換行，不截斷 */
+.vv-readout__label {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  font-size: var(--text-12);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-2);
+}
+
+/* 次要數值（Δx、周長、坪數、邊長、直徑等） */
+.vv-readout__extra {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.vv-readout__extra:empty { display: none; }
+
+.vv-readout__value {
+  font-family: var(--font-num);
+  font-size: var(--vv-readout-value);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-on);
+}
+
+.vv-readout__unit {
+  font-size: var(--text-14);
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* 座標：X、Y 各一行。卡片加 .vv-readout--xy，內容用 .vv-readout__xy */
+.vv-readout__xy {
+  min-inline-size: 0;
+  font-family: var(--font-num);
+  font-size: var(--text-18);
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ui-on);
+}
+
+.vv-readout__axis {
+  margin-inline-end: var(--space-8);
+  font-size: var(--text-12);
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* 右側兩顆圖示鈕。結果：儲存（.vv-icon-btn--fill）與不留（.is-off）；進行中：復原（--line）與完成（--fill）。
+   即時量測中（還沒放完點）不放按鈕 */
+.vv-readout__actions {
+  flex: none;
+  display: flex;
+  gap: 10px;
+}
+
+/* ---------- Dock：四個工具、分隔線、鎖點開關。預設不選任何工具 ---------- */
+.vv-dock {
+  position: absolute;
+  left: var(--vv-left);
+  right: var(--vv-right);
+  bottom: var(--vv-dock-bottom);
+  block-size: var(--dock-h);
+  border-radius: var(--dock-r);
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.vv-tool {
+  inline-size: var(--tool-btn);
+  block-size: var(--tool-btn);
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-2);
+  transition:
+    scale var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease),
+    inline-size var(--dur-fast) var(--ease),
+    block-size var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.vv-tool__icon {
+  inline-size: 24px;
+  block-size: 24px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vv-tool__label {
+  font-size: var(--text-12);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* 工具選取中：64px、白色文字與外框、上緣高光，沒有光暈 */
+.vv-tool:not(.vv-tool--toggle)[aria-pressed="true"] {
+  --vv-shadow: inset 0 1px 1px var(--ui-on-highlight);
+  inline-size: var(--tool-btn-on);
+  block-size: var(--tool-btn-on);
+  color: var(--ui-on);
+  background: var(--ui-on-soft);
+  border: 1px solid var(--ui-on-edge);
+  box-shadow: var(--vv-shadow);
+}
+
+/* 開關（鎖點、逐點封閉的「封閉」）：不是工具，選取工具時不影響它。
+   開啟時沒有外框與底色，文字與圖示用 tokens 的漸層（白、淡紫、淡綠、淡藍），只有一層很小的光暈。
+   圖示的漸層需要頁面上有 <linearGradient id="vv-toggle-grad">（寫法見 design/integration-v13.md）。 */
+.vv-tool--toggle[aria-pressed="true"] { color: var(--ui-on); }
+
+:is(.vv-tool--toggle, .vv-actionbar__btn--toggle)[aria-pressed="true"] :is(.vv-tool__label, .vv-actionbar__label) {
+  background: var(--toggle-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: var(--toggle-glow);
+}
+
+:is(.vv-tool--toggle, .vv-actionbar__btn--toggle)[aria-pressed="true"] :is(.vv-tool__icon, .vv-icon) {
+  stroke: url(#vv-toggle-grad) var(--ui-on); /* 頁面上沒有漸層定義時退回白色，圖示不會消失 */
+  filter: var(--toggle-glow);
+}
+
+/* 開關關閉：灰色文字與圖示，沒有任何光暈 */
+:is(.vv-tool--toggle, .vv-actionbar__btn--toggle)[aria-pressed="false"] { color: var(--text-2); }
+
+/* 漸層的色標：顏色來自 tokens */
+.vv-toggle-stop--1 { stop-color: var(--toggle-c1); }
+.vv-toggle-stop--2 { stop-color: var(--toggle-c2); }
+.vv-toggle-stop--3 { stop-color: var(--toggle-c3); }
+.vv-toggle-stop--4 { stop-color: var(--toggle-c4); }
+
+.vv-dock__sep {
+  inline-size: 1px;
+  block-size: 32px;
+  flex: none;
+  background: var(--glass-edge);
+}
+
+/* ---------- 「更多」選單：Dock 上方 12px、靠右 ---------- */
+.vv-menu {
+  position: absolute;
+  right: var(--vv-right);
+  bottom: var(--vv-menu-bottom);
+  inline-size: var(--menu-w);
+  max-block-size: calc(100% - var(--vv-menu-bottom) - var(--vv-top) - var(--title-h) - var(--space-12));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--card-r);
+  padding: var(--space-8) 0;
+  display: flex;
+  flex-direction: column;
+  animation: vv-rise var(--dur-base) var(--ease);
+}
+
+.vv-menu__item {
+  min-block-size: var(--btn-h);
+  flex: none;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: var(--text-16);
+  text-align: start;
+}
+
+.vv-menu__item .vv-icon { stroke-width: 1.8; }
+
+/* 分組的第一項：上方分隔線（工具與「標記清單、匯出」之間） */
+.vv-menu__item--sep { border-top: 1px solid var(--hair); }
+
+/* 單選的項目用 role="menuitemradio" 加 aria-checked；前面的勾只在選取時顯示 */
+.vv-menu__item[aria-checked="false"] > .vv-icon { visibility: hidden; }
+
+/* 開在觸發鈕下方的選單（排序）：放在 position: relative 的容器裡 */
+.vv-menu--below {
+  top: calc(100% + var(--space-4));
+  right: auto;
+  bottom: auto;
+  left: 0;
+  z-index: 3;
+  max-block-size: none;
+}
+
+/* ---------- 圖面上的數字膠囊：以 --vv-x、--vv-y 指定中心點（px） ---------- */
+.vv-pill {
+  position: absolute;
+  left: var(--vv-x, 0px);
+  top: var(--vv-y, 0px);
+  translate: -50% -50%;
+  block-size: var(--pill-h);
+  border-radius: var(--pill-r);
+  padding: 0 var(--space-12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-num);
+  font-size: var(--text-12);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: 0 0 0 2px var(--canvas);
+  pointer-events: none;
+}
+
+/* 鎖點種類的小標：端點、中點、圓心、交點 */
+.vv-pill--tag {
+  block-size: 22px;
+  border-radius: 11px;
+  padding: 0 9px;
+  font-family: var(--font-ui);
+  font-weight: 700;
+}
+
+/* ---------- 放大鏡外框：以 --vv-x、--vv-y 指定中心點；內容由渲染器畫 ---------- */
+.vv-loupe {
+  position: absolute;
+  left: var(--vv-x, 0px);
+  top: var(--vv-y, 0px);
+  translate: -50% -50%;
+  inline-size: var(--loupe-d);
+  block-size: var(--loupe-d);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--canvas);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow);
+  pointer-events: none;
+}
+
+.vv-loupe > canvas,
+.vv-loupe > svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* ---------- 遮罩 ---------- */
+.vv-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  animation: vv-fade var(--dur-base) var(--ease);
+}
+
+/* ---------- 卡片：對話框與載入卡，垂直置中 ---------- */
+.vv-card {
+  position: absolute;
+  inset-block: 0;
+  left: max(var(--card-inset), env(safe-area-inset-left, 0px));
+  right: max(var(--card-inset), env(safe-area-inset-right, 0px));
+  margin-block: auto;
+  block-size: fit-content;
+  max-block-size: calc(100% - var(--vv-top) - var(--space-16) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--card-r);
+  padding: var(--card-pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+  animation: vv-rise var(--dur-base) var(--ease);
+}
+
+.vv-card__title {
+  margin: 0;
+  font-size: var(--text-18);
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* 檔名、大小 */
+.vv-card__meta {
+  font-family: var(--font-num);
+  font-size: var(--text-14);
+  line-height: 1.7;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+/* 目前畫面稿沒有用到內文；保留給真的需要說明的情況 */
+.vv-card__text {
+  margin: 0;
+  text-wrap: pretty;
+  font-size: var(--text-16);
+  line-height: 1.6;
+}
+
+.vv-card__sub {
+  margin: 0;
+  text-wrap: pretty;
+  font-size: var(--text-14);
+  line-height: 1.6;
+  color: var(--text-2);
+}
+
+/* 大檔提醒：只在檔案超過 --file-warn-mb 時出現 */
+.vv-card__hint {
+  margin: 0;
+  font-size: var(--text-14);
+  color: var(--text-2);
+}
+
+/* 錯誤卡的原因 */
+.vv-card__reason {
+  margin: 0;
+  font-size: var(--text-16);
+}
+
+.vv-card__actions {
+  display: flex;
+  gap: var(--space-12);
+}
+
+/* ---------- 載入狀態：圈圈、文字、右側秒數 ---------- */
+.vv-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  font-size: var(--text-16);
+  line-height: 1.7;
+}
+
+.vv-status__icon {
+  inline-size: 20px;
+  block-size: 20px;
+  flex: none;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  animation: vv-spin var(--dur-spin) linear infinite;
+}
+
+.vv-status__track { stroke: var(--glass-edge); }
+.vv-status__arc { stroke: var(--ui-on); }
+
+.vv-status__time {
+  margin-inline-start: auto;
+  font-family: var(--font-num);
+  font-size: var(--text-14);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+/* ---------- 按鈕 ---------- */
+.vv-btn {
+  flex: 1;
+  min-inline-size: var(--hit-min);
+  block-size: var(--btn-h);
+  border-radius: var(--btn-r);
+  padding-inline: var(--space-16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-16);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.vv-btn--primary {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+}
+
+.vv-btn--ghost {
+  border: 1px solid var(--ghost-edge);
+  color: var(--text);
+}
+
+/* ---------- 文字連結：全部顯示、全部隱藏、匯出全部 ---------- */
+/* 負邊距讓點擊範圍達 44px 高而不撐開版面 */
+.vv-link {
+  min-inline-size: var(--hit-min);
+  min-block-size: var(--hit-min);
+  margin-block: -10px;
+  border-radius: var(--space-8);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-on);
+  font-size: var(--text-14);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  white-space: nowrap;
+}
+
+/* ---------- 圖示鈕：44px ---------- */
+.vv-icon-btn {
+  inline-size: var(--hit-min);
+  block-size: var(--hit-min);
+  flex: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+.vv-icon-btn .vv-icon { stroke-width: 1.8; }
+
+.vv-icon-btn--fill {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+}
+
+.vv-icon-btn--line { border: 1px solid var(--ghost-edge); }
+
+.vv-icon-btn.is-off { color: var(--text-2); }
+
+/* ---------- 輸入欄：外框是 .vv-field，裡面放 <input class="vv-field__input"> ---------- */
+.vv-field {
+  block-size: var(--btn-h);
+  border-radius: var(--btn-r);
+  border: 1px solid var(--ghost-edge);
+  background: var(--field);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 var(--space-16);
+  font-size: var(--text-16);
+  color: var(--text-2);
+  cursor: text;
+  transition: box-shadow var(--dur-fast) var(--ease);
+}
+
+.vv-field__icon {
+  inline-size: 20px;
+  block-size: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.vv-field__input {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  caret-color: var(--ui-on);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.vv-field__input::placeholder {
+  color: var(--text-2);
+  opacity: 1;
+}
+
+.vv-field__input::-webkit-search-decoration,
+.vv-field__input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+/* 一般文字輸入：字 16px、主要文字色 */
+.vv-field--text { color: var(--text); }
+
+/* 錯誤狀態：裡面的 input 設 aria-invalid="true"，外框變提醒色 */
+.vv-field:has([aria-invalid="true"]) { border-color: var(--warn); }
+
+/* 大數字欄：校正單位的實際長度 */
+.vv-field--big {
+  block-size: 56px;
+  border-radius: 28px;
+  flex: 1;
+  min-inline-size: 0;
+  border-color: var(--ui-on-edge);
+  color: var(--text);
+  font-family: var(--font-num);
+  font-size: var(--text-24);
+  font-weight: 600;
+}
+
+/* ---------- 分段選擇：role="radiogroup"，選項 role="radio"，選取用 aria-checked="true" ---------- */
+.vv-seg {
+  inline-size: 156px;
+  block-size: 56px;
+  flex: none;
+  border-radius: 28px;
+  border: 1px solid var(--ghost-edge);
+  padding: var(--space-4);
+  display: flex;
+  gap: var(--space-4);
+}
+
+.vv-seg__opt {
+  flex: 1;
+  min-inline-size: var(--hit-min);
+  border-radius: var(--btn-r);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-num);
+  font-size: var(--text-16);
+  color: var(--text-2);
+}
+
+.vv-seg__opt[aria-checked="true"] {
+  --vv-shadow: inset 0 0 0 1px var(--ui-on-edge);
+  background: var(--ui-on-soft);
+  color: var(--ui-on);
+  font-weight: 600;
+  box-shadow: var(--vv-shadow);
+}
+
+/* 撐滿整行（單位面板） */
+.vv-seg--wide {
+  inline-size: auto;
+  flex: 1;
+}
+
+/* ---------- 下方面板：圖層、校正單位 ---------- */
+.vv-sheet {
+  position: absolute;
+  left: max(var(--sheet-inset), env(safe-area-inset-left, 0px));
+  right: max(var(--sheet-inset), env(safe-area-inset-right, 0px));
+  bottom: var(--sheet-inset);
+  --vv-sheet-max: calc(100% - var(--vv-top) - var(--title-h) - var(--space-12) - var(--sheet-inset)); /* 頂端離標題膠囊固定 12px */
+  max-block-size: var(--vv-sheet-max);
+  overflow-y: auto; /* 沒有清單的面板（校正單位）放不下時整個面板捲動 */
+  overscroll-behavior: contain;
+  border-radius: var(--sheet-r);
+  padding: 10px 20px max(var(--space-24), env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  animation: vv-rise var(--dur-base) var(--ease);
+}
+
+/* 需要邊操作邊看圖的面板（圖層）：最高只到畫面的 60%，上方留給圖面 */
+.vv-sheet--peek { max-block-size: min(var(--vv-sheet-max), 60%); }
+
+/* 標題列、搜尋欄等固定不動，只有清單在面板內捲動 */
+.vv-sheet > * { flex: none; }
+
+.vv-sheet > :is(.vv-rows, .vv-help) {
+  margin-inline: calc(var(--space-4) * -1); /* 讓出色塊外框與焦點環，避免被捲動區裁掉 */
+  padding-inline: var(--space-4);
+  flex: 0 1 auto;
+  min-block-size: calc(var(--row-h) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.vv-sheet__grab {
+  align-self: center;
+  flex: none;
+  inline-size: 36px;
+  block-size: 4px;
+  border-radius: 2px;
+  background: var(--ghost-edge);
+}
+
+.vv-sheet__head {
+  min-block-size: var(--hit-min);
+  margin-block-start: calc(var(--space-8) * -1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vv-sheet__title {
+  margin: 0;
+  font-size: var(--text-18);
+  font-weight: 700;
+}
+
+/* 標題旁的數量 */
+.vv-sheet__count {
+  margin-inline-start: var(--space-8);
+  font-family: var(--font-num);
+  font-size: var(--text-14);
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.vv-sheet__links {
+  min-block-size: var(--space-24);
+  display: flex;
+  align-items: center;
+  gap: var(--space-24);
+}
+
+/* 輸入欄加分段選擇並排 */
+.vv-sheet__line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+/* ---------- 使用說明：條列文字，放在 .vv-sheet 裡，內容太長時在面板內捲動 ---------- */
+.vv-help {
+  margin: 0;
+  padding-inline-start: 1.3em;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: var(--text-16);
+  line-height: 1.5;
+}
+
+/* 在面板裡捲動時保留項目符號的縮排 */
+.vv-sheet > .vv-help { padding-inline: calc(1.3em + var(--space-4)) var(--space-4); }
+
+/* ---------- 圖層列 ---------- */
+.vv-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.vv-row {
+  box-sizing: content-box; /* 列高 --row-h 不含上方 1px 分隔線，與畫面稿一致 */
+  min-block-size: var(--row-h);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  border-top: 1px solid var(--hair);
+}
+
+/* 圖層色由程式設定 --vv-swatch */
+.vv-row__swatch {
+  inline-size: 14px;
+  block-size: 14px;
+  flex: none;
+  border-radius: 3px;
+  background: var(--vv-swatch, var(--text-2));
+  box-shadow: 0 0 0 1px var(--ghost-edge);
+}
+
+.vv-row__name {
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--text-16);
+}
+
+.vv-row__count {
+  margin-inline-start: auto;
+  font-family: var(--font-num);
+  font-size: var(--text-12);
+  color: var(--text-2);
+}
+
+.vv-row.is-off :is(.vv-row__name, .vv-row__swatch) { opacity: .45; }
+
+/* ---------- 標記清單的列：圖示、名稱、靠右的數值、刪除鈕。放在 .vv-rows 裡 ---------- */
+.vv-mark-row {
+  box-sizing: content-box; /* 列高不含上方 1px 分隔線 */
+  min-block-size: var(--row-h);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  border-top: 1px solid var(--hair);
+}
+
+.vv-mark-row > .vv-icon { stroke-width: 1.8; }
+
+/* 文字類的列沒有數值，名稱自然佔滿 */
+.vv-mark-row__name {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--text-16);
+}
+
+.vv-mark-row__value {
+  flex: none;
+  font-family: var(--font-num);
+  font-size: var(--text-14);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-2);
+}
+
+/* ---------- 選項列：匯出面板的圖片、DXF。整列可點 ---------- */
+.vv-option {
+  box-sizing: content-box; /* 列高不含上方 1px 分隔線 */
+  inline-size: 100%;
+  min-block-size: 72px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  border-top: 1px solid var(--hair);
+  text-align: start;
+}
+
+.vv-option .vv-icon {
+  inline-size: 24px;
+  block-size: 24px;
+  stroke-width: 1.8;
+}
+
+.vv-option__title {
+  display: block;
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.vv-option__sub {
+  display: block;
+  font-size: var(--text-14);
+  color: var(--text-2);
+}
+
+.vv-option__go {
+  margin-inline-start: auto;
+  color: var(--text-2);
+}
+
+/* ---------- 密碼與已停用共用的置中版面 ---------- */
+.vv-gate {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding:
+    env(safe-area-inset-top, 0px)
+    max(var(--space-32), env(safe-area-inset-right, 0px))
+    80px
+    max(var(--space-32), env(safe-area-inset-left, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  gap: var(--space-16);
+}
+
+.vv-gate > * { flex: none; }
+
+.vv-gate__logo {
+  display: block;
+  inline-size: 72px;
+  block-size: 72px;
+  border-radius: 18px;
+}
+
+.vv-gate__title {
+  margin: 0 0 var(--space-8);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.vv-gate__text {
+  margin: 0;
+  font-size: var(--text-16);
+  color: var(--text-2);
+}
+
+.vv-gate .vv-field {
+  inline-size: 100%;
+  color: var(--text);
+  letter-spacing: .3em;
+}
+
+.vv-gate .vv-btn { inline-size: 100%; }
+
+.vv-gate__error {
+  align-self: flex-start;
+  margin: calc(var(--space-8) * -1) 0 0 var(--space-16);
+  font-size: var(--text-14);
+  font-weight: 700;
+  color: var(--warn);
+}
+
+/* ---------- 左標籤、右邊分段選擇（匯出的底色） ---------- */
+.vv-kvrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding-block-end: var(--space-12);
+  font-size: var(--text-16);
+}
+
+/* 比一般的分段選擇矮一些，但每個選項仍有 44px 高 */
+.vv-kvrow .vv-seg {
+  inline-size: 168px;
+  block-size: 52px;
+  border-radius: 26px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.vv-kvrow .vv-seg__opt {
+  border-radius: 22px;
+  font-family: var(--font-ui);
+}
+
+/* ---------- 左標籤、右數值 ---------- */
+.vv-kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  font-size: var(--text-16);
+}
+
+.vv-kv__k { color: var(--text-2); }
+
+.vv-kv__v {
+  font-family: var(--font-num);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 主畫面：整頁可捲動，底部讓出分頁膠囊與匯入鈕 ---------- */
+.vv-home {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding:
+    calc(var(--vv-top) + var(--space-4))
+    var(--vv-right)
+    calc(var(--vv-home-bottom) + var(--space-16))
+    var(--vv-left);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.vv-home > * { flex: none; }
+
+/* 標誌與名稱；右側 .vv-home__actions 放搜尋、說明兩顆圖示鈕 */
+.vv-home__top {
+  min-block-size: var(--hit-min);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vv-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* 標誌：32px、圓角 8px */
+.vv-brand img,
+.vv-brand__mark {
+  display: block;
+  inline-size: 32px;
+  block-size: 32px;
+  flex: none;
+  border-radius: var(--space-8);
+}
+
+.vv-home__actions {
+  margin-inline-end: -10px;
+  display: flex;
+}
+
+/* 分頁：最近、收藏、資料庫。固定在底部的玻璃膠囊，右邊留給匯入鈕；放在 .vv-home 之外。
+   容器 role="tablist"，選取用 aria-selected="true" */
+.vv-tabs {
+  position: absolute;
+  left: var(--vv-left);
+  right: calc(var(--vv-right) + var(--fab-size) + var(--tabs-gap));
+  bottom: var(--vv-dock-bottom);
+  block-size: var(--tabs-h);
+  border-radius: calc(var(--tabs-h) / 2);
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+/* 寬度不夠放三個 --tab-w 時平均縮小，但每個不小於 64px 寬 */
+.vv-tab {
+  inline-size: var(--tab-w);
+  min-inline-size: 64px;
+  block-size: var(--vv-tab-h);
+  flex: 0 1 var(--tab-w);
+  border-radius: calc(var(--vv-tab-h) / 2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-2);
+  font-size: var(--text-12);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.vv-tab .vv-icon { stroke-width: 1.8; }
+
+.vv-tab[aria-selected="true"] {
+  --vv-shadow: inset 0 1px 1px var(--ui-on-highlight);
+  color: var(--ui-on);
+  background: var(--ui-on-soft);
+  border: 1px solid var(--ui-on-edge);
+  box-shadow: var(--vv-shadow);
+}
+
+/* 分頁的內容區：數量列、清單、頁碼等 */
+.vv-home__panel {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.vv-home__panel > * { flex: none; }
+
+/* 數量與顯示方式 */
+.vv-viewbar {
+  position: relative; /* 排序選單的定位基準 */
+  min-block-size: var(--hit-min);
+  margin: -6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vv-viewbar__count {
+  font-family: var(--font-num);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+/* 排序鈕：目前的排序名稱加向下箭頭，點了在下方開 .vv-menu.vv-menu--below。只出現在收藏與資料庫 */
+.vv-sort {
+  min-block-size: var(--hit-min);
+  min-inline-size: var(--hit-min);
+  margin: 0 auto 0 14px;
+  border-radius: var(--space-8);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-14);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.vv-sort .vv-icon {
+  inline-size: 16px;
+  block-size: 16px;
+  stroke-width: 2;
+}
+
+/* 塊狀、條列兩顆圖示鈕，選取用 aria-pressed="true" */
+.vv-viewtoggle {
+  margin-inline-end: -10px;
+  display: flex;
+}
+
+.vv-viewtoggle .vv-icon-btn { color: var(--text-2); }
+.vv-viewtoggle .vv-icon-btn[aria-pressed="true"] { color: var(--ui-on); }
+
+/* ---------- 塊狀：手機兩欄，600px 以上三欄，900px 以上四欄 ---------- */
+.vv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-8) var(--space-12);
+}
+
+@media (min-width: 600px) {
+  .vv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 900px) {
+  .vv-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.vv-tile {
+  position: relative;
+  min-inline-size: 0;
+}
+
+/* 縮圖與檔名是同一顆按鈕；星號與更多鈕另外疊在上面 */
+.vv-tile__open {
+  display: block;
+  inline-size: 100%;
+  border-radius: var(--tile-r);
+  text-align: start;
+}
+
+.vv-tile__thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--tile-r);
+  background: var(--thumb);
+  box-shadow: 0 0 0 1px var(--hair);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-2);
+}
+
+.vv-tile__art {
+  inline-size: 100%;
+  block-size: 100%;
+  fill: none;
+}
+
+.vv-tile__thumb .vv-icon {
+  inline-size: 28px;
+  block-size: 28px;
+  stroke-width: 1.6;
+}
+
+/* 縮圖右上角的收藏星號：44px 可點範圍，內含 28px 圓底與 18px 星形 */
+.vv-tile__star {
+  position: absolute;
+  right: 0;
+  top: 0;
+  inline-size: var(--hit-min);
+  block-size: var(--hit-min);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vv-tile__star-bg {
+  inline-size: 28px;
+  block-size: 28px;
+  border-radius: 50%;
+  background: var(--scrim);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vv-tile__star .vv-icon {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+.vv-tile__star[aria-pressed="true"] .vv-icon {
+  fill: var(--ui-on);
+  stroke: var(--ui-on);
+}
+
+.vv-tile__cap {
+  min-block-size: var(--hit-min);
+  margin-block-start: var(--space-4);
+  padding-inline-end: calc(var(--hit-min) - 10px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.vv-tile__name,
+.vv-tile__meta {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.vv-tile__name {
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+.vv-tile__meta {
+  font-family: var(--font-num);
+  font-size: var(--text-12);
+  color: var(--text-2);
+}
+
+.vv-tile__warn,
+.vv-lrow__warn {
+  font-family: var(--font-ui);
+  font-style: normal;
+  font-weight: 700;
+  color: var(--warn);
+}
+
+.vv-tile__more {
+  position: absolute;
+  right: -10px;
+  bottom: 0;
+}
+
+/* ---------- 條列：每列可左滑露出動作鈕 ---------- */
+.vv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.vv-lrow {
+  --vv-lrow-open: calc(var(--lrow-action-w) * -2); /* 開啟時 body 的位移：兩顆動作鈕的寬度 */
+  position: relative;
+  box-sizing: content-box; /* 列高不含上方 1px 分隔線，與畫面稿一致 */
+  block-size: var(--lrow-h);
+  overflow: hidden;
+  border-top: 1px solid var(--hair);
+  touch-action: pan-y;
+}
+
+/* 蓋住後面的動作鈕；拖曳中由程式設定 --vv-dx（px） */
+.vv-lrow__body {
+  position: absolute;
+  inset: 0;
+  background: var(--canvas);
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  transform: translateX(var(--vv-dx, 0px));
+  transition: transform var(--dur-base) var(--ease);
+}
+
+/* 開啟：.is-open，或鍵盤焦點落在列內任何元素上 */
+.vv-lrow.is-open .vv-lrow__body,
+.vv-lrow:has(:focus-visible) .vv-lrow__body {
+  transform: translateX(var(--vv-dx, var(--vv-lrow-open)));
+}
+
+.vv-lrow.is-dragging .vv-lrow__body { transition: none; }
+
+/* 整列可點的部分：縮圖、檔名、資訊 */
+.vv-lrow__open {
+  flex: 1;
+  min-inline-size: 0;
+  block-size: 100%;
+  border-radius: var(--space-12);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: start;
+}
+
+.vv-lrow__thumb {
+  inline-size: 56px;
+  block-size: 56px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--thumb);
+  box-shadow: 0 0 0 1px var(--hair);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vv-lrow__thumb .vv-tile__art { display: block; }
+
+.vv-lrow__thumb .vv-icon {
+  inline-size: 24px;
+  block-size: 24px;
+}
+
+.vv-lrow__main {
+  display: block;
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.vv-lrow__name {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--text-16);
+  font-weight: 500;
+  color: var(--text);
+}
+
+.vv-lrow__meta {
+  display: block;
+  font-family: var(--font-num);
+  font-size: var(--text-12);
+  color: var(--text-2);
+}
+
+/* 已收藏的標示：18px 實心星，不可點 */
+.vv-lrow__fav {
+  inline-size: 28px;
+  flex: none;
+  display: flex;
+  justify-content: center;
+}
+
+.vv-lrow__fav .vv-icon {
+  inline-size: 18px;
+  block-size: 18px;
+  fill: var(--ui-on);
+  stroke: var(--ui-on);
+}
+
+.vv-lrow__actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+}
+
+.vv-lrow__action {
+  inline-size: var(--lrow-action-w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  font-size: var(--text-12);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.vv-lrow__action .vv-icon { stroke-width: 1.8; }
+
+.vv-lrow__action--fav {
+  background: var(--ui-on-soft);
+  color: var(--ui-on);
+}
+
+.vv-lrow__action--delete {
+  background: var(--warn);
+  color: var(--ui-on-ink);
+}
+
+/* ---------- 頁碼：超過一頁才顯示（不顯示時加 hidden） ---------- */
+.vv-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  font-family: var(--font-num);
+  font-size: var(--text-14);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.vv-pager .vv-icon-btn:disabled { color: var(--text-2); }
+
+/* 已使用空間與「匯出全部」。--inline：靠左排成一行，只在資料庫分頁的最後 */
+.vv-usage {
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-12);
+  border-top: 1px solid var(--hair);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-14);
+  color: var(--text-2);
+}
+
+.vv-usage--inline {
+  justify-content: flex-start;
+  gap: var(--space-16);
+  padding-block-start: 0;
+  border-top: 0;
+}
+
+.vv-usage__v {
+  font-family: var(--font-num);
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* 空狀態：只有一行字 */
+.vv-none {
+  margin: auto;
+  padding-block-end: 120px;
+  font-size: var(--text-16);
+  color: var(--text-2);
+  text-align: center;
+}
+
+/* 面板（例如使用說明）開著時，底部的分頁膠囊與匯入鈕不顯示 */
+.vv-app:has(> .vv-sheet:not([hidden])) > :is(.vv-tabs, .vv-fab) { display: none; }
+
+/* ---------- 浮動匯入鈕：右下角，與分頁膠囊並排、垂直置中對齊 ---------- */
+.vv-fab {
+  --vv-shadow: var(--fab-shadow);
+  position: absolute;
+  right: var(--vv-right);
+  bottom: var(--vv-fab-bottom);
+  inline-size: var(--fab-size);
+  block-size: var(--fab-size);
+  border-radius: 50%;
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+  box-shadow: var(--vv-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vv-fab .vv-icon {
+  inline-size: 26px;
+  block-size: 26px;
+  stroke-width: 2;
+}
+
+/* ---------- 刪除後的提示：底部分頁膠囊上方 12px、水平置中；看圖畫面用 --above-dock ---------- */
+.vv-toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--vv-home-bottom) + var(--space-12));
+  transform: translateX(-50%);
+  min-block-size: var(--notice-h);
+  max-inline-size: calc(100% - var(--vv-left) - var(--vv-right));
+  border-radius: var(--notice-r);
+  padding: 10px var(--space-16);
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  font-size: var(--text-14);
+  line-height: 1.4;
+  white-space: nowrap;
+  animation: vv-rise var(--dur-base) var(--ease);
+}
+
+.vv-toast--above-dock { bottom: var(--vv-menu-bottom); }
+
+/* ---------- 圖面上方的提示：.vv-notices 負責定位，.vv-notice 是單則 ---------- */
+.vv-notices {
+  position: absolute;
+  top: calc(var(--vv-top) + var(--title-h) + var(--space-8));
+  left: var(--vv-left);
+  right: var(--vv-right);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* 可點的提示用 <button> 加 .vv-notice--go，右側放向右箭頭 .vv-notice__go */
+.vv-notice {
+  position: relative;
+  inline-size: 100%;
+  min-block-size: var(--notice-h);
+  border-radius: var(--notice-r);
+  padding: 10px var(--space-16);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--text-14);
+  line-height: 1.4;
+  text-align: start;
+  animation: vv-rise var(--dur-base) var(--ease);
+}
+
+:is(.vv-notice__icon, .vv-notice__go) {
+  inline-size: 18px;
+  block-size: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vv-notice--warn .vv-notice__icon { color: var(--warn); }
+
+.vv-notice__go {
+  margin-inline-start: auto;
+  color: var(--text-2);
+}
+
+/* ---------- 狀態：按下 ---------- */
+:is(.vv-round-btn, .vv-titlebar, .vv-tool):active { scale: .96; }
+:is(.vv-round-btn, .vv-titlebar):active { background-color: var(--glass-solid); }
+:is(.vv-zoom__btn, .vv-icon-btn):active { scale: .92; background-color: var(--glass-edge); }
+.vv-icon-btn--fill:active { background-color: var(--ui-on); opacity: .85; }
+.vv-tool:not(.vv-tool--toggle):active { background-color: var(--ui-on-soft); }
+:is(.vv-btn, .vv-notice--go):active { scale: .98; }
+.vv-btn--primary:active { opacity: .85; }
+:is(.vv-btn--ghost, .vv-seg__opt):active { background-color: var(--glass-edge); }
+:is(.vv-link, .vv-sort):active { opacity: .7; }
+:is(.vv-menu__item, .vv-option):active { background-color: var(--hair); }
+.vv-tile__open:active { scale: .98; opacity: .85; }
+:is(.vv-tab, .vv-tile__star):active { scale: .92; }
+.vv-fab:active { scale: .94; }
+:is(.vv-lrow__open, .vv-lrow__action):active { opacity: .7; }
+
+/* ---------- 狀態：停用 ---------- */
+:is(.vv-round-btn, .vv-titlebar, .vv-zoom__btn, .vv-tool, .vv-btn, .vv-link, .vv-icon-btn, .vv-seg__opt, .vv-menu__item, .vv-option, .vv-sort, .vv-tab, .vv-tile__open, .vv-tile__star, .vv-lrow__open, .vv-lrow__action, .vv-fab, .vv-notice--go):is(:disabled, [aria-disabled="true"]),
+.vv-field:has(:disabled) {
+  opacity: .4;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* ---------- 狀態：鍵盤焦點 ---------- */
+:is(.vv-round-btn, .vv-titlebar, .vv-zoom__btn, .vv-tool, .vv-btn, .vv-link, .vv-icon-btn, .vv-seg__opt, .vv-menu__item, .vv-option, .vv-sort, .vv-tab, .vv-tile__open, .vv-tile__star, .vv-lrow__open, .vv-lrow__action, .vv-fab, .vv-notice--go):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring), var(--vv-shadow);
+}
+
+/* 動作鈕的焦點環畫在內側，才不會被列裁掉 */
+.vv-lrow__action:focus-visible { box-shadow: inset 0 0 0 2px var(--canvas), inset 0 0 0 4px var(--ui-on); }
+
+/* 輸入欄：游標在欄內時外框顯示焦點環 */
+.vv-field:focus-within { box-shadow: var(--focus-ring); }
+
+@media (forced-colors: active) {
+  :is(.vv-round-btn, .vv-titlebar, .vv-zoom__btn, .vv-tool, .vv-btn, .vv-link, .vv-icon-btn, .vv-seg__opt, .vv-menu__item, .vv-option, .vv-sort, .vv-tab, .vv-tile__open, .vv-tile__star, .vv-lrow__open, .vv-lrow__action, .vv-fab, .vv-notice--go):focus-visible,
+  .vv-field:focus-within {
+    outline: 2px solid;
+    outline-offset: 2px;
+  }
+}
+
+/* ---------- 精簡尺寸：高度 640px 以下（Safari 分頁、小螢幕）。字級下限仍是 12px ---------- */
+@media (max-height: 640px) {
+  :root {
+    --title-h: 44px;
+    --round-btn: 44px;
+    --dock-h: 64px;
+    --dock-r: 32px;
+    --tool-btn: 52px;
+    --tool-btn-on: 56px;
+    --readout-h: 56px;
+    --readout-r: 22px;
+    --vv-readout-value: 20px;
+    --vv-dock-min: var(--space-12);
+    --tabs-h: 56px;
+    --vv-tab-h: 44px;
+  }
+}
+
+/* ---------- 矮畫面：縮放鈕只留「顯示全圖」，放大縮小用雙指 ---------- */
+@media (max-height: 560px) {
+  .vv-zoom {
+    block-size: auto;
+    min-block-size: var(--zoom-w);
+    justify-content: center;
+  }
+
+  .vv-zoom__btn:not(.vv-zoom__btn--fit) { display: none; }
+}
+
+/* ---------- 更矮（例如鍵盤彈出）：右側縮放鈕整組隱藏 ---------- */
+@media (max-height: 480px) {
+  .vv-zoom { display: none; }
+}
+
+/* ---------- 標記清單的編號：編號、名稱與數值、刪除鈕，列本身沒有外框也沒有填色 ---------- */
+.vv-mark-row__no {
+  flex: none;
+  min-inline-size: var(--space-24);
+  font-family: var(--font-num);
+  font-size: var(--text-14);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+/* ---------- 逐點封閉的操作列：封閉｜退回｜清除 ----------
+   位置與舊的讀數卡相同（Dock 上方 --readout-gap），讀數卡本身已移到標題列下方。
+   三個按鈕各至少 44x44px；沒有「取消」，清除就是取消。 */
+.vv-actionbar {
+  position: absolute;
+  inset-inline: 0;
+  bottom: var(--vv-readout-bottom);
+  margin-inline: auto;
+  inline-size: fit-content;
+  max-inline-size: calc(100% - var(--vv-left) - var(--vv-right));
+  block-size: var(--actionbar-h);
+  padding: var(--space-4);
+  border-radius: calc(var(--actionbar-h) / 2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  animation: vv-rise var(--dur-base) var(--ease);
+}
+
+.vv-actionbar[hidden] { display: none; }
+
+.vv-actionbar__btn {
+  min-inline-size: var(--actionbar-btn-w);
+  block-size: var(--hit-min);
+  padding-inline: var(--space-16);
+  border-radius: calc(var(--hit-min) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-16);
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.vv-actionbar__btn--primary {
+  background: var(--ui-on);
+  color: var(--ui-on-ink);
+}
+
+/* 「封閉」是開關，不是動作：用圖示加文字，開啟時的樣式見上面的「開關」那一段 */
+.vv-actionbar__btn--toggle {
+  gap: var(--space-4);
+  padding-inline: var(--space-12);
+}
+
+.vv-actionbar__btn--toggle .vv-icon {
+  inline-size: 18px;
+  block-size: 18px;
+}
+
+.vv-actionbar__btn:active { scale: .96; }
+.vv-actionbar__btn--primary:active { opacity: .85; }
+.vv-actionbar__btn:not(.vv-actionbar__btn--primary):active { background-color: var(--glass-edge); }
+
+.vv-actionbar__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.vv-actionbar__btn:is(:disabled, [aria-disabled="true"]) {
+  opacity: .4;
+  pointer-events: none;
+  cursor: default;
+}
+
+/* ---------- 動效 ---------- */
+@keyframes vv-fade {
+  from { opacity: 0; }
+}
+
+@keyframes vv-rise {
+  from { opacity: 0; translate: 0 var(--space-8); }
+}
+
+@keyframes vv-spin {
+  to { rotate: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class^="vv-"],
+  [class*=" vv-"] {
+    transition: none !important;
+    animation: none !important;
+  }
+}
