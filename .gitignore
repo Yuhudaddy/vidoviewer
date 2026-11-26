@@ -12,3 +12,17 @@ evidence/
 tests/e2e/*-report.md
 __pycache__/
 *.pyc
+
+# 與應用程式執行無關的內容：只留在本機，不推到倉庫（沒有要打包成應用程式）
+tests/
+tools/
+scripts/
+animation/
+LAN-TEST.md
+core/INTERFACE.md
+docs/
+skills/
+.claude/
+.agents/
+CHANGELOG*
+PLAN*
