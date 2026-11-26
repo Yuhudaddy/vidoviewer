@@ -50,9 +50,11 @@
 
 .service-disabled { padding: 3rem; color: #eef4f8; background: #171e25; min-height: 100vh; font: 1.2rem system-ui, sans-serif; }
 
-/* 加入主畫面（獨立視窗）：不用 100dvh，改填滿整個螢幕。iPhone 在這個模式下 100dvh 比螢幕少一個狀態列高度，底部的膠囊會被抬高。 */
+/* 加入主畫面（獨立視窗）：iOS 26 真機實測，只要有一個 position: fixed; inset: 0 的全螢幕元素，
+   視窗高度（innerHeight、100dvh）就會少一個上方安全區（390x844 的手機是 797），元素被裁在 797，底部膠囊被抬高。
+   改成 absolute 加 100lvh（真機實測 844）就正常。Safari 分頁不受影響，維持 fixed。 */
 @media (display-mode: standalone) {
-  .vv-app { height: auto; bottom: 0; }
-  /* 狀態列（時間、電池）下方再留 --standalone-top-gap（預設 24px，可在 :root 覆寫），標題列與按鈕不要落在系統的淡出範圍內 */
+  .vv-app { position: absolute; inset: auto; top: 0; left: 0; right: 0; height: 100lvh; }
+  /* 狀態列（時間、電池）下方再留 --standalone-top-gap（預設 24px，可在 :root 覆寫） */
   :root, .app-viewer { --vv-top: max(4px, calc(env(safe-area-inset-top, 0px) + var(--standalone-top-gap, 24px))); }
 }

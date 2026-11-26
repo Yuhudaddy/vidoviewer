@@ -335,7 +335,7 @@ def desktop(p):
     if SECURE:
         page.evaluate('() => navigator.serviceWorker.ready.then(() => true)')
         keys = page.evaluate('() => caches.keys()')
-        check('SW 快取為新版且只有一份', len(keys) == 1 and keys[0].endswith('-v61'), keys)
+        check('SW 快取為新版且只有一份', len(keys) == 1 and keys[0].endswith('-v62'), keys)
         ctx.set_offline(True)
         offline_state['offline'] = True
         page.reload(); page.locator('.drawing-item').first.wait_for(timeout=15000)
