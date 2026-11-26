@@ -96,8 +96,10 @@ $('import').onclick = () => $('file').click();
 $('file').onchange = async e => {
   const files = [...e.target.files];
   e.target.value = '';
-  if (!files.length) return;
-  let added = 0, duplicates = 0, rejected = 0;
+  if (files.length) await importFiles(files);
+};
+async function importFiles(files, skipped = 0) {
+  let added = 0, duplicates = 0, rejected = skipped;
   for (const file of files) {
     if (file.size > FILE_LIMIT || !/\.(dwg|dxf)$/i.test(file.name)) { rejected++; continue; }
     try { (await importDrawing(file)).duplicate ? duplicates++ : added++; }
@@ -106,7 +108,23 @@ $('file').onchange = async e => {
   home.showTab('library'); // 新匯入的圖還沒開過，只會出現在資料庫
   await home.refresh({keepScroll: false});
   home.toast([added && `已匯入 ${added} 個`, duplicates && `${duplicates} 個已在資料庫`, rejected && `略過 ${rejected} 個（非 DWG、DXF 或超過 65 MB）`].filter(Boolean).join('，'));
-};
+}
+// Android share sheet: sw.js parks the shared files in a cache and redirects here with ?shared=; import them, then delete them.
+async function importShared() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('shared')) return;
+  history.replaceState(history.state, '', location.pathname + location.hash);
+  const skipped = Number(params.get('skipped')) || 0, pending = [];
+  try {
+    const cache = await caches.open('vidoviewer-inbox');
+    for (const request of await cache.keys()) {
+      const response = await cache.match(request), blob = await response.blob();
+      pending.push({request, file: new File([blob], decodeURIComponent(response.headers.get('X-File-Name') || 'shared.dwg'), {type: blob.type, lastModified: Number(response.headers.get('X-Last-Modified')) || Date.now()})});
+    }
+    if (pending.length || skipped) await importFiles(pending.map(x => x.file), skipped);
+    for (const {request} of pending) await cache.delete(request);
+  } catch { home.toast('無法匯入分享的檔案'); }
+}
 $('example').onclick = async () => {
   home.closeHelp({focus: false});
   try {
@@ -734,11 +752,13 @@ canvas.addEventListener('wheel', e => {
 
 // ---------- 啟動 ----------
 if (parser.interrupted()) dialog('上次開啟時被中止', '', '了解', '').then(() => parser.clearInterrupted());
-home.start().then(() => {
+const started = home.start();
+started.then(() => {
   if (!$('toast').hidden) return; // 正在顯示「已刪除　復原」時不蓋掉它
   if (!window.isSecureContext) home.toast('此網址為 HTTP，無法離線使用', {ms: 5000});
   else if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => home.toast('離線快取無法啟用'));
 });
+started.then(importShared);
 const hash = location.hash.match(/^#drawing=(\d+)$/);
 if (hash) {
   const id = Number(hash[1]);
