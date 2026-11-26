@@ -98,31 +98,40 @@ $('file').onchange = async e => {
   e.target.value = '';
   if (files.length) await importFiles(files);
 };
-async function importFiles(files, skipped = 0) {
+// Returns the files that were dealt with (imported, already present, or rejected). A storage failure stops the loop and leaves the rest out.
+async function importFiles(files, {skipped = 0, failed = 0} = {}) {
   let added = 0, duplicates = 0, rejected = skipped;
+  const handled = new Set();
   for (const file of files) {
-    if (file.size > FILE_LIMIT || !/\.(dwg|dxf)$/i.test(file.name)) { rejected++; continue; }
-    try { (await importDrawing(file)).duplicate ? duplicates++ : added++; }
+    if (file.size > FILE_LIMIT || !/\.(dwg|dxf)$/i.test(file.name)) { rejected++; handled.add(file); continue; }
+    try { (await importDrawing(file)).duplicate ? duplicates++ : added++; handled.add(file); }
     catch { await dialog('無法儲存圖面', '儲存空間不足', '了解', ''); break; }
   }
   home.showTab('library'); // 新匯入的圖還沒開過，只會出現在資料庫
   await home.refresh({keepScroll: false});
-  home.toast([added && `已匯入 ${added} 個`, duplicates && `${duplicates} 個已在資料庫`, rejected && `略過 ${rejected} 個（非 DWG、DXF 或超過 65 MB）`].filter(Boolean).join('，'));
+  home.toast([added && `已匯入 ${added} 個`, duplicates && `${duplicates} 個已在資料庫`, rejected && `略過 ${rejected} 個（非 DWG、DXF 或超過 65 MB）`, failed && `${failed} 個分享失敗`].filter(Boolean).join('，'));
+  return handled;
 }
-// Android share sheet: sw.js parks the shared files in a cache and redirects here with ?shared=; import them, then delete them.
+// Android share sheet: sw.js parks the shared files in a cache and redirects here with ?shared=. Anything still waiting there
+// (an offline share, a share whose page never finished loading, files left after a storage error) is imported on every start.
+// Only files that were dealt with are deleted, so nothing is lost when storage runs out.
 async function importShared() {
   const params = new URLSearchParams(location.search);
-  if (!params.has('shared')) return;
-  history.replaceState(history.state, '', location.pathname + location.hash);
-  const skipped = Number(params.get('skipped')) || 0, pending = [];
+  const count = name => Math.max(0, Math.trunc(Number(params.get(name)) || 0));
+  if (params.has('shared')) history.replaceState(history.state, '', location.pathname + location.hash);
+  if (!('caches' in window) || !await caches.has('vidoviewer-inbox')) return; // has() first: do not create an empty cache on every start
   try {
-    const cache = await caches.open('vidoviewer-inbox');
+    const cache = await caches.open('vidoviewer-inbox'), pending = [];
     for (const request of await cache.keys()) {
-      const response = await cache.match(request), blob = await response.blob();
+      const response = await cache.match(request);
+      if (!response) continue; // another tab already imported and removed it
+      const blob = await response.blob();
       pending.push({request, file: new File([blob], decodeURIComponent(response.headers.get('X-File-Name') || 'shared.dwg'), {type: blob.type, lastModified: Number(response.headers.get('X-Last-Modified')) || Date.now()})});
     }
-    if (pending.length || skipped) await importFiles(pending.map(x => x.file), skipped);
-    for (const {request} of pending) await cache.delete(request);
+    const skipped = count('skipped'), failed = count('failed');
+    if (!pending.length && !skipped && !failed) return;
+    const handled = await importFiles(pending.map(x => x.file), {skipped, failed});
+    for (const {request, file} of pending) if (handled.has(file)) await cache.delete(request);
   } catch { home.toast('無法匯入分享的檔案'); }
 }
 $('example').onclick = async () => {

@@ -18,7 +18,7 @@ try {
     }
     if ('caches' in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.filter(key => /^vidoviewer-(shell|design|lan)-/.test(key)).map(key => caches.delete(key)));
+      await Promise.all(keys.filter(key => /^vidoviewer-(shell|design|lan)-/.test(key) || key === 'vidoviewer-inbox').map(key => caches.delete(key)));
     }
   } else if (status.enabled !== true) throw new Error('狀態格式無效');
 } catch (error) { console.warn('無法確認服務狀態，允許離線使用：', error); }
