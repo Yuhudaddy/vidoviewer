@@ -8,7 +8,15 @@ import {initHome, fmtBytes} from './home.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('drawing');
-const renderer = new Renderer(canvas, {onBudget: limited => { $('budgetNotice').hidden = !limited; }, pill: $('measurementPill')});
+// 「放大以顯示細節」只在剛變成受限時出現 3 秒；使用者放大到不再受限、之後又受限時才會再出現。每次繪製都會回報，所以要比對狀態。
+let budgetLimited = false, budgetTimer = 0;
+const setBudgetNotice = limited => {
+  if (limited === budgetLimited) return;
+  budgetLimited = limited; clearTimeout(budgetTimer);
+  $('budgetNotice').hidden = !limited;
+  if (limited) budgetTimer = setTimeout(() => { $('budgetNotice').hidden = true; }, 3000);
+};
+const renderer = new Renderer(canvas, {onBudget: setBudgetNotice, pill: $('measurementPill')});
 const parser = new ParseLifecycle();
 // 圖上的數字膠囊要避開的面板（畫布座標）：縮放鈕與顯示中的讀數卡
 renderer.avoid = () => {
@@ -107,7 +115,7 @@ function showLibrary() {
   renderer.scene = null;
   renderer.clearOverlay();
   $('notice').hidden = true;
-  $('budgetNotice').hidden = true;
+  clearTimeout(budgetTimer); budgetLimited = false; $('budgetNotice').hidden = true;
   $('viewerLayer').hidden = true;
   $('library').hidden = false;
   home.refresh();
@@ -189,6 +197,7 @@ function showDrawing(name, value, record) {
   $('notice').hidden = true;
   renderer.resize();
   measureInsets();
+  clearTimeout(budgetTimer); budgetLimited = false; $('budgetNotice').hidden = true; // 換圖時重設，直接從一張受限圖切到另一張也會再顯示 3 秒
   renderer.setScene(scene);
   markRecords = record?.marks || []; undoStack = reconcileHistory(record?.measurementState, markRecords); activeMarkKey = null;
   historyReady = true;
