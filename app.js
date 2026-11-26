@@ -8,15 +8,7 @@ import {initHome, fmtBytes} from './home.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('drawing');
-// 「放大以顯示細節」只在剛變成受限時出現 3 秒；使用者放大到不再受限、之後又受限時才會再出現。每次繪製都會回報，所以要比對狀態。
-let budgetLimited = false, budgetTimer = 0;
-const setBudgetNotice = limited => {
-  if (limited === budgetLimited) return;
-  budgetLimited = limited; clearTimeout(budgetTimer);
-  $('budgetNotice').hidden = !limited;
-  if (limited) budgetTimer = setTimeout(() => { $('budgetNotice').hidden = true; }, 3000);
-};
-const renderer = new Renderer(canvas, {onBudget: setBudgetNotice, pill: $('measurementPill')});
+const renderer = new Renderer(canvas, {pill: $('measurementPill')});
 const parser = new ParseLifecycle();
 // 圖上的數字膠囊要避開的面板（畫布座標）：縮放鈕與顯示中的讀數卡
 renderer.avoid = () => {
@@ -43,7 +35,31 @@ function notice(text, ms = 6000) {
   $('notice').hidden = false;
   if (ms) noticeTimer = setTimeout(() => { $('notice').hidden = true; }, ms);
 }
-$('drawingWarningClose').onclick = () => { $('drawingWarning').hidden = true; };
+$('drawingWarningClose').onclick = () => { $('drawingWarning').hidden = true; $('drawingWarningList').hidden = true; $('drawingWarningToggle').setAttribute('aria-expanded', 'false'); };
+$('drawingWarningToggle').onclick = () => {
+  const open = $('drawingWarningList').hidden;
+  $('drawingWarningList').hidden = !open;
+  $('drawingWarningToggle').setAttribute('aria-expanded', String(open));
+};
+// 被略過的物件：核心回報的類型代碼轉成看得懂的中文；沒對到的照原代碼顯示，不假裝認得。
+const KIND_NAME = {AcDbLine: '線', AcDbCircle: '圓', AcDbArc: '圓弧', AcDbPolyline: '多段線', AcDb2dPolyline: '多段線', AcDb3dPolyline: '3D 多段線', AcDbEllipse: '橢圓', AcDbSpline: '雲形線', AcDbPoint: '點', AcDbSolid: '實心填色', AcDbTrace: '實心填色', AcDbText: '文字', AcDbMText: '多行文字', AcDbHatch: '填充', AcDbBlockReference: '圖塊', AcDbFace: '3D 面'};
+const kindName = k => Object.hasOwn(KIND_NAME, k) ? KIND_NAME[k] : String(k).replace(/^AcDb/, '');
+function skippedLabel(key) {
+  if (key.startsWith('tilted-')) return `畫在傾斜平面上的${kindName(key.slice(7))}`;
+  if (key.startsWith('hatch-edge-')) return '填充的邊界含不支援的線段';
+  if (key.startsWith('error-')) return `解析時出錯的${kindName(key.slice(6))}`;
+  const FIXED = {'hatch-empty': '沒有邊界的填充', 'insert-no-block': '找不到內容的圖塊', 'minsert-too-large': '數量過大的陣列圖塊', 'dimension-no-block': '缺少內容的標註', 'recursive-insert': '互相包含的圖塊'};
+  return Object.hasOwn(FIXED, key) ? FIXED[key] : `不支援的物件：${kindName(key)}`;
+}
+function fillWarningList(scene) {
+  const list = $('drawingWarningList'); list.replaceChildren();
+  const add = text => { const li = document.createElement('li'); li.textContent = text; list.append(li); };
+  const byType = Object.entries(scene.skipped?.byType || {}).sort((a, b) => b[1] - a[1]);
+  if (byType.length) { const h = document.createElement('li'); h.className = 'app-warning__head'; h.textContent = '略過的物件'; list.append(h); for (const [key, n] of byType.slice(0, 20)) add(`${skippedLabel(key)}　${n} 個`); if (byType.length > 20) add(`另有 ${byType.length - 20} 種`); }
+  const warnings = scene.warnings || [];
+  if (warnings.length) { const h = document.createElement('li'); h.className = 'app-warning__head'; h.textContent = `解析警告 ${warnings.length} 則`; list.append(h); for (const w of warnings.slice(0, 5)) { const t = String(w ?? ''); add(t.length > 90 ? `${t.slice(0, 90)}…` : t); } if (warnings.length > 5) add(`另有 ${warnings.length - 5} 則`); }
+  return list.childElementCount > 0;
+}
 function setModal(on) { $('library').inert = on; $('viewerLayer').inert = on; }
 function dialog(title, text, confirm = '繼續', cancel = '取消') {
   return new Promise(resolve => {
@@ -115,7 +131,6 @@ function showLibrary() {
   renderer.scene = null;
   renderer.clearOverlay();
   $('notice').hidden = true;
-  clearTimeout(budgetTimer); budgetLimited = false; $('budgetNotice').hidden = true;
   $('viewerLayer').hidden = true;
   $('library').hidden = false;
   home.refresh();
@@ -197,7 +212,6 @@ function showDrawing(name, value, record) {
   $('notice').hidden = true;
   renderer.resize();
   measureInsets();
-  clearTimeout(budgetTimer); budgetLimited = false; $('budgetNotice').hidden = true; // 換圖時重設，直接從一張受限圖切到另一張也會再顯示 3 秒
   renderer.setScene(scene);
   markRecords = record?.marks || []; undoStack = reconcileHistory(record?.measurementState, markRecords); activeMarkKey = null;
   historyReady = true;
@@ -205,6 +219,8 @@ function showDrawing(name, value, record) {
   else { updateSavedMarks(); updateHistoryControls(); }
   const warning = scene.skipped?.count ? `已略過 ${scene.skipped.count} 個物件` : scene.warnings?.length ? `解析警告 ${scene.warnings.length} 則` : '';
   $('drawingWarningText').textContent = warning;
+  const detail = warning && fillWarningList(scene);
+  $('drawingWarningList').hidden = true; $('drawingWarningToggle').setAttribute('aria-expanded', 'false'); $('drawingWarningToggle').hidden = !detail;
   $('drawingWarning').hidden = !warning;
 }
 $('cancelLoading').onclick = () => { requestId++; parser.cancel(); $('loading').hidden = true; setModal(false); };

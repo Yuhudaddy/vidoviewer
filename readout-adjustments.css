@@ -8,10 +8,21 @@
 .app-readout-actions { grid-area: actions; display: flex; flex-direction: row; align-items: center; }
 #saveMark, #clear { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
 #saveMark svg, #clear svg { display: block; margin: auto; }
-#drawingWarning { min-height: 44px; padding: 0 4px 0 12px; font-size: 12px; }
+#drawingWarning { min-height: 44px; padding: 0 4px 0 12px; font-size: 12px; flex-direction: column; align-items: stretch; gap: 0; }
+.app-warning__row { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 #drawingWarningText { flex: 1; min-width: 0; }
-#drawingWarningClose { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
-#drawingWarningClose svg { display: block; margin: auto; }
+.app-warning__btn { display: grid; place-items: center; width: 44px; min-width: 44px; height: 44px; padding: 0; }
+.app-warning__btn[hidden] { display: none; }
+.app-warning__btn svg { display: block; margin: auto; }
+#drawingWarningToggle svg { transition: transform var(--dur-fast) var(--ease); }
+#drawingWarningToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.vv-notices:has(#drawingWarningList:not([hidden])) { z-index: 9; } /* 展開時蓋在縮放鈕上面 */
+.app-warning__list { list-style: none; margin: 0; padding: 4px 12px 12px 0; max-height: 40vh; overflow-y: auto; border-top: 1px solid var(--hair); font-size: 12px; line-height: 1.6; color: var(--text-2); }
+.app-warning__list[hidden] { display: none; }
+.app-warning__list li { padding: 2px 0; overflow-wrap: anywhere; }
+.app-warning__list .app-warning__head { margin-top: 8px; font-weight: 700; color: var(--text); }
+.app-warning__list .app-warning__head:first-child { margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) { #drawingWarningToggle svg { transition: none; } }
 
 /* 只收緊看圖頁；避開瀏海與 Home 指示條，按鈕仍至少 44px。 */
 :root {

@@ -1500,8 +1500,8 @@
 }
 
 .vv-lrow__action--delete {
-  background: var(--warn);
-  color: var(--ui-on-ink);
+  background: var(--danger);
+  color: var(--on-danger);
 }
 
 /* ---------- 頁碼：超過一頁才顯示（不顯示時加 hidden） ---------- */
